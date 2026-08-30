@@ -1,0 +1,92 @@
+/* Lightbox — same drafting language as the page: ink surround, mono labels. */
+
+.gallery-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+
+.gallery-ref {
+    flex: 0 0 auto;
+    padding: 2px 6px;
+    border: 1px solid var(--mud-palette-lines-default, rgba(0, 0, 0, 0.2));
+    font-size: 0.68rem;
+}
+
+.gallery-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gallery-count {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.gallery-slide {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: 0;
+    background: #16130E;
+    /* leave a band at the bottom for the carousel's bullet strip */
+    padding-bottom: 2.25rem;
+}
+
+.gallery-img {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    object-fit: contain;
+}
+
+.gallery-cap {
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.75rem 1rem 0;
+    background: #16130E;
+    color: #F3F0E9;
+    font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    font-size: 0.72rem;
+}
+
+.gallery-cap-meta {
+    color: rgba(243, 240, 233, 0.7);
+}
+
+/* Carousel controls sit over near-black plates — force light, amber active bullet.
+   Scoped via the plain .gallery-body wrapper (MudCarousel gets no scope attr). */
+.gallery-body ::deep .mud-icon-button {
+    color: #F3F0E9;
+}
+
+.gallery-body ::deep .mud-carousel-bullets {
+    color: rgba(243, 240, 233, 0.55);
+}
+
+.gallery-body ::deep .mud-carousel-bullet-active {
+    color: #E4B429;
+}
+
+@media (max-width: 560px) {
+    .gallery-bar {
+        gap: 0.5rem;
+    }
+
+    .gallery-cap {
+        padding: 0.6rem 0.85rem 0;
+    }
+}

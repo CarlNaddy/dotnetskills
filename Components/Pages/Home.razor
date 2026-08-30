@@ -1,7 +1,256 @@
-﻿@page "/"
+@page "/"
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Havenly · Architect-led homes</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">Hello, world!</MudText>
+<HeadContent>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+</HeadContent>
 
-<MudText>Welcome to your new app.</MudText>
+<div class="plan">
+
+    <!-- ═══════════════ A-0 · Title block ═══════════════ -->
+    <section class="sheet hero">
+        <div class="hero-copy">
+            <p class="eyebrow">Havenly <span class="tick">—</span> architect-led homes</p>
+            <MudText Typo="Typo.h1" Class="display hero-h">Homes with an architect's name on them.</MudText>
+            <p class="lede">
+                A small, working collection of modernist and mid-century houses —
+                each one surveyed, documented, and open for viewing.
+            </p>
+
+            <div class="dimline" aria-hidden="true">
+                <span class="dimline-label">Est. 2019 · 48 houses documented</span>
+            </div>
+
+            <div class="hero-actions">
+                <MudButton Variant="Variant.Filled" DropShadow="false"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           OnClick="BrowseCollection" Class="btn btn-solid">
+                    Browse the collection
+                </MudButton>
+                <MudButton Variant="Variant.Text" OnClick="BookViewing" Class="btn btn-ghost">
+                    Book a viewing
+                </MudButton>
+            </div>
+        </div>
+
+        <figure class="hero-figure">
+            <button type="button" class="frame frame-btn"
+                    aria-label="View photos of the collection"
+                    @onclick="@(() => OpenGallery(0))">
+                <img class="duotone" alt="A restored mid-century house at dusk"
+                     src="https://picsum.photos/seed/haven-titleblock/1100/1500?grayscale" />
+                <span class="frame-hint" aria-hidden="true">View photos</span>
+            </button>
+            <figcaption class="framecap">A-0.1 · Lakeside, 1962 · restored 2024</figcaption>
+        </figure>
+    </section>
+
+    <!-- ═══════════════ A-1 · The collection ═══════════════ -->
+    <section class="sheet">
+        <header class="sheet-head">
+            <p class="eyebrow">A-1 · The collection</p>
+            <MudText Typo="Typo.h3" Class="display sheet-h">Open for viewing</MudText>
+            <p class="sheet-note">Six houses currently on the market.</p>
+        </header>
+
+        <div class="grid grid-3">
+            @for (var i = 0; i < _listings.Count; i++)
+            {
+                var l = _listings[i];
+                var idx = i;
+                <MudPaper Elevation="0" Class="card listing">
+                    <button type="button" class="frame frame-btn"
+                            aria-label="@($"View photos of {l.Name}")"
+                            @onclick="@(() => OpenGallery(idx))">
+                        <img class="duotone" alt="@l.Name" src="@Thumb(l.Seed)" />
+                        <span class="sheetref">@l.Sheet</span>
+                        <span class="status" data-under="@(l.Status == "Under offer")">@l.Status</span>
+                        <span class="frame-hint" aria-hidden="true">View photos</span>
+                    </button>
+
+                    <div class="listing-body">
+                        <MudText Typo="Typo.h5" Class="display listing-name">@l.Name</MudText>
+                        <p class="meta">@l.Location · @l.Architect · @l.Year</p>
+
+                        <dl class="dims">
+                            <div><dt>Beds</dt><dd>@l.Beds</dd></div>
+                            <div><dt>Baths</dt><dd>@l.Baths</dd></div>
+                            <div><dt>Interior</dt><dd>@l.SqFt SF</dd></div>
+                        </dl>
+
+                        <div class="listing-foot">
+                            <span class="price">@l.Price</span>
+                            <MudButton Variant="Variant.Text" Class="btn btn-view"
+                                       OnClick="@(() => View(l))">View details</MudButton>
+                        </div>
+                    </div>
+                </MudPaper>
+            }
+        </div>
+    </section>
+
+    <!-- ═══════════════ A-2 · By location ═══════════════ -->
+    <section class="sheet">
+        <header class="sheet-head">
+            <p class="eyebrow">A-2 · By location</p>
+            <MudText Typo="Typo.h3" Class="display sheet-h">Where the houses are</MudText>
+            <p class="sheet-note">Four neighborhoods we know street by street.</p>
+        </header>
+
+        <div class="grid grid-4">
+            @foreach (var c in _cities)
+            {
+                <div class="place" role="button" tabindex="0"
+                     @onclick="@(() => SelectCity(c.Name))"
+                     @onkeydown="@(e => { if (e.Key is "Enter" or " ") SelectCity(c.Name); })">
+                    <div class="frame frame-tall">
+                        <img class="duotone" alt="@c.Name" src="@c.Image" />
+                    </div>
+                    <div class="place-line">
+                        <span class="place-name">@c.Name</span>
+                        <span class="place-count">@c.Listings homes</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- ═══════════════ A-3 · How it works ═══════════════ -->
+    <section class="sheet">
+        <header class="sheet-head">
+            <p class="eyebrow">A-3 · How it works</p>
+            <MudText Typo="Typo.h3" Class="display sheet-h">From first call to keys</MudText>
+            <p class="sheet-note">Four steps, in order. You get the same agent through all of them.</p>
+        </header>
+
+        <ol class="steps">
+            @foreach (var s in _steps)
+            {
+                <li class="step">
+                    <span class="step-no">@s.No</span>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="display step-h">@s.Title</MudText>
+                        <p class="step-body">@s.Body</p>
+                    </div>
+                </li>
+            }
+        </ol>
+    </section>
+
+    <!-- ═══════════════ A-4 · From a buyer ═══════════════ -->
+    <section class="sheet">
+        <p class="eyebrow">A-4 · From a buyer</p>
+        <blockquote class="quote">
+            <MudText Typo="Typo.h4" Class="display quote-text">
+                "We toured on a Saturday and had the keys within a month. The dossier caught a
+                roof issue the listing didn't mention — that alone paid for itself."
+            </MudText>
+            <footer class="quote-by">Jordan &amp; Riley P. <span class="tick">—</span> bought the Lakeside house, 2026</footer>
+        </blockquote>
+    </section>
+
+    <!-- ═══════════════ A-5 · Book ═══════════════ -->
+    <section class="sheet cta">
+        <p class="eyebrow eyebrow-invert">A-5 · Book</p>
+        <MudText Typo="Typo.h2" Class="display cta-h">Come see one in person.</MudText>
+        <p class="cta-sub">Viewings run Thursday to Sunday. Tell us which house and we'll set it up.</p>
+        <div class="hero-actions">
+            <MudButton Variant="Variant.Filled" DropShadow="false"
+                       OnClick="BookViewing" Class="btn btn-marker">
+                Book a viewing
+            </MudButton>
+            <MudButton Variant="Variant.Text" OnClick="GetAlerts" Class="btn btn-ghost-invert">
+                Get new-listing alerts
+            </MudButton>
+        </div>
+    </section>
+
+    <p class="colophon">Havenly Real Estate · Drawing set A-0–A-5 · 2026</p>
+</div>
+
+@code {
+    private sealed record Listing(
+        string Sheet, string Name, string Location, string Architect, string Year,
+        string Status, string Price, int Beds, int Baths, string SqFt, string Seed);
+
+    // picsum seeds stand in for the real listing photography.
+    private readonly List<Listing> _listings = new()
+    {
+        new("A-1.1", "Maple Court House", "Lakeside",  "R. Halden",   "1962", "For sale",
+            "$725,000",   3, 2, "1,840", "haven-maple"),
+        new("A-1.2", "Ridgeline House",  "Highlands", "M. Okafor",   "1971", "For sale",
+            "$1,190,000", 4, 3, "2,760", "haven-ridge"),
+        new("A-1.3", "Harbor Walk Flat", "Old Town",  "Studio Vare", "1958", "Under offer",
+            "$489,000",   2, 2, "1,150", "haven-harbor"),
+        new("A-1.4", "Birchwood House",  "Fairview",  "R. Halden",   "1965", "For sale",
+            "$935,000",   4, 3, "2,400", "haven-birch"),
+        new("A-1.5", "Canal Street House","Riverside","J. Prieto",   "1969", "For sale",
+            "$615,000",   3, 2, "1,620", "haven-canal"),
+        new("A-1.6", "Summit View House", "The Heights","M. Okafor",  "1974", "For sale",
+            "$2,050,000", 5, 4, "4,180", "haven-summit"),
+    };
+
+    private static string Thumb(string seed) => $"https://picsum.photos/seed/{seed}/900/1100?grayscale";
+    private static string Full(string seed) => $"https://picsum.photos/seed/{seed}/1600/1100";
+
+    private sealed record Place(string Name, int Listings, string Image);
+
+    private readonly List<Place> _cities = new()
+    {
+        new("Lakeside",  12, "https://picsum.photos/seed/place-lakeside/700/900?grayscale"),
+        new("Highlands",  6, "https://picsum.photos/seed/place-highlands/700/900?grayscale"),
+        new("Old Town",   9, "https://picsum.photos/seed/place-oldtown/700/900?grayscale"),
+        new("Riverside",  8, "https://picsum.photos/seed/place-riverside/700/900?grayscale"),
+    };
+
+    private sealed record Step(string No, string Title, string Body);
+
+    private readonly Step[] _steps =
+    {
+        new("01", "Survey",
+            "We walk the house with you and note what's original, what's been changed, and what needs work."),
+        new("02", "Dossier",
+            "You get a file: drawings, permit history, past sale prices, and a repair estimate — before you commit to anything."),
+        new("03", "Viewing",
+            "See it in person with the agent who wrote the dossier. Bring your architect; they'll have questions ready."),
+        new("04", "Offer",
+            "We draft the offer, run the back-and-forth, and tell you where things stand at every step."),
+    };
+
+    private void BrowseCollection() => Snackbar.Add("Loading the collection…", Severity.Info);
+
+    private void BookViewing() => Snackbar.Add("We'll confirm your viewing by email.", Severity.Success);
+
+    private void GetAlerts() => Snackbar.Add("You're on the list. New homes land in your inbox.", Severity.Success);
+
+    private void SelectCity(string name) => Snackbar.Add($"Showing houses in {name}.", Severity.Info);
+
+    private void View(Listing l) => Snackbar.Add($"Opening {l.Name}.", Severity.Info);
+
+    private Task OpenGallery(int index)
+    {
+        IReadOnlyList<GalleryPhoto> photos = _listings
+            .Select(l => new GalleryPhoto(l.Sheet, l.Name, l.Location, l.Architect, l.Year, Full(l.Seed)))
+            .ToList();
+
+        var parameters = new DialogParameters<GalleryDialog>
+        {
+            { x => x.Photos, photos },
+            { x => x.StartIndex, index },
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+        };
+
+        return DialogService.ShowAsync<GalleryDialog>(string.Empty, parameters, options);
+    }
+}

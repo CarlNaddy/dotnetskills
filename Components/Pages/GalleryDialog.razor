@@ -1,0 +1,48 @@
+<MudDialog ContentClass="pa-0" Class="gallery-dialog">
+    <TitleContent>
+        <div class="gallery-bar">
+            <span class="gallery-ref">@_photo.Sheet</span>
+            <span class="gallery-name">@_photo.Name</span>
+            <MudSpacer />
+            <span class="gallery-count">@(_index + 1)&thinsp;/&thinsp;@Photos.Count</span>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                           OnClick="@(() => MudDialog.Close())" aria-label="Close gallery" />
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="gallery-body">
+            <MudCarousel TData="GalleryPhoto" ItemsSource="Photos" @bind-SelectedIndex="_index"
+                         AutoCycle="false" ShowArrows="true" ShowBullets="true"
+                         Style="height:min(72vh, 680px);" Class="gallery-carousel">
+                <ItemTemplate Context="photo">
+                    <figure class="gallery-slide">
+                        <img class="gallery-img" src="@photo.Image" alt="@photo.Name" />
+                        <figcaption class="gallery-cap">
+                            <span class="gallery-cap-name">@photo.Name</span>
+                            <span class="gallery-cap-meta">@photo.Location · @photo.Architect · @photo.Year</span>
+                        </figcaption>
+                    </figure>
+                </ItemTemplate>
+            </MudCarousel>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<GalleryPhoto> Photos { get; set; } = System.Array.Empty<GalleryPhoto>();
+
+    [Parameter]
+    public int StartIndex { get; set; }
+
+    private int _index;
+
+    private GalleryPhoto _photo =>
+        Photos.Count == 0 ? default! : Photos[System.Math.Clamp(_index, 0, Photos.Count - 1)];
+
+    protected override void OnInitialized() =>
+        _index = Photos.Count == 0 ? 0 : System.Math.Clamp(StartIndex, 0, Photos.Count - 1);
+}

@@ -1,0 +1,735 @@
+/* ============================================================
+   Havenly — architect-led homes
+   The page is staged as an architect's drawing set: mono sheet
+   refs, drafting crop marks, dimension-line callouts, and photos
+   in an amber duotone that resolves to full colour on hover.
+
+   NOTE: MudBlazor components (MudText / MudButton / MudPaper) do
+   not receive this file's CSS-isolation scope attribute, so every
+   rule that targets one of their rendered elements is written as
+   `.plan ::deep <selector>`.
+   ============================================================ */
+
+.plan {
+    --ink: #16130E;
+    --paper: #F3F0E9;
+    --marker: #E4B429;
+    --rule: rgba(22, 19, 14, 0.20);
+    --rule: color-mix(in srgb, var(--mud-palette-text-primary, #16130E) 20%, transparent);
+
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-block: 0.5rem 3rem;
+    font-family: var(--body);
+    color: var(--mud-palette-text-primary);
+}
+
+.plan ::deep .display {
+    font-family: var(--display) !important;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+}
+
+/* ---------- Sheets ---------- */
+.sheet {
+    padding-block: clamp(3rem, 7vw, 6rem);
+    border-top: 1px solid var(--rule);
+}
+
+.sheet.hero {
+    border-top: 0;
+    padding-top: clamp(0.5rem, 3vw, 2.25rem);
+}
+
+.eyebrow {
+    margin: 0 0 1.1rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tick {
+    color: var(--marker);
+    margin-inline: 0.3em;
+}
+
+.sheet-head {
+    max-width: 60ch;
+    margin-bottom: clamp(1.75rem, 4vw, 3rem);
+}
+
+.plan ::deep .sheet-h {
+    font-size: clamp(1.8rem, 3.5vw, 2.75rem);
+    font-weight: 700;
+    margin: 0;
+}
+
+.sheet-note {
+    margin: 0.6rem 0 0;
+    font-size: 0.95rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- A-0 · Title block ---------- */
+.hero {
+    display: grid;
+    grid-template-columns: 1.12fr 0.88fr;
+    gap: clamp(2rem, 5vw, 4.5rem);
+    align-items: end;
+}
+
+.hero-copy {
+    min-width: 0;
+}
+
+.plan ::deep .hero-h {
+    font-size: clamp(2.3rem, 6.5vw, 5rem);
+    font-weight: 700;
+    line-height: 1.03;
+    margin: 0;
+    max-width: 15ch;
+}
+
+/* the Blazor template's FocusOnNavigate targets <h1> — hide the
+   programmatic focus ring, keep it for real keyboard focus */
+.plan ::deep .hero-h:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.lede {
+    margin: 1.4rem 0 0;
+    max-width: 46ch;
+    font-size: clamp(1rem, 2.4vw, 1.14rem);
+    line-height: 1.55;
+    color: var(--mud-palette-text-secondary);
+}
+
+.dimline {
+    position: relative;
+    max-width: 340px;
+    height: 1px;
+    margin: 2.25rem 0;
+    background: var(--rule);
+}
+
+.dimline::before,
+.dimline::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    width: 1px;
+    height: 9px;
+    background: var(--mud-palette-text-primary);
+}
+
+.dimline::before { left: 0; }
+.dimline::after { right: 0; }
+
+.dimline-label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 0 0.7rem;
+    background: var(--mud-palette-background, var(--mud-palette-surface));
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
+.hero-figure {
+    position: relative;
+    margin: 0;
+}
+
+.hero-figure .frame {
+    aspect-ratio: 4 / 5;
+}
+
+/* drafting crop marks — hero only */
+.hero-figure::before,
+.hero-figure::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+}
+
+.hero-figure::before {
+    top: -8px;
+    left: -8px;
+    border-top: 1px solid var(--mud-palette-text-primary);
+    border-left: 1px solid var(--mud-palette-text-primary);
+}
+
+.hero-figure::after {
+    bottom: -8px;
+    right: -8px;
+    border-bottom: 1px solid var(--mud-palette-text-primary);
+    border-right: 1px solid var(--mud-palette-text-primary);
+}
+
+.framecap {
+    margin-top: 0.7rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- Duotone frame (shared) ---------- */
+.frame {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    background: var(--mud-palette-action-disabled-background);
+    border-radius: 2px;
+}
+
+.frame-tall {
+    aspect-ratio: 3 / 4;
+}
+
+.duotone {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(1) contrast(1.04);
+    transition: filter 0.45s ease;
+}
+
+.frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--marker);
+    mix-blend-mode: multiply;
+    opacity: 0.17;
+    transition: opacity 0.45s ease;
+    pointer-events: none;
+}
+
+.frame-btn:hover .duotone,
+.frame-btn:focus-visible .duotone,
+.place:hover .duotone,
+.place:focus-visible .duotone {
+    filter: grayscale(0) contrast(1);
+}
+
+.frame-btn:hover .frame::after,
+.frame-btn:focus-visible .frame::after,
+.place:hover .frame::after,
+.place:focus-visible .frame::after {
+    opacity: 0;
+}
+
+/* Image is the gallery trigger — reset the button, keep the frame box. */
+.frame-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.frame-btn:focus-visible {
+    outline: 2px solid var(--marker);
+    outline-offset: 3px;
+}
+
+.frame-hint {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    margin: 0.6rem;
+    padding: 4px 8px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.frame-btn:hover .frame-hint,
+.frame-btn:focus-visible .frame-hint {
+    opacity: 1;
+    transform: none;
+}
+
+/* ---------- A-1 · Collection ---------- */
+.grid {
+    display: grid;
+    gap: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.plan ::deep .card.listing {
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.plan ::deep .card.listing:hover,
+.plan ::deep .card.listing:focus-within {
+    border-color: var(--mud-palette-text-primary);
+}
+
+.plan ::deep .card.listing:hover {
+    transform: translateY(-3px);
+}
+
+.listing .frame {
+    border-radius: 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.sheetref {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    padding: 2px 6px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--mud-palette-text-primary);
+}
+
+.status {
+    position: absolute;
+    top: 0.6rem;
+    left: 0.6rem;
+    padding: 3px 7px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.status[data-under="true"] {
+    background: transparent;
+    color: var(--mud-palette-text-primary);
+    border: 1px solid var(--mud-palette-text-primary);
+}
+
+.listing-body {
+    padding: clamp(1rem, 2vw, 1.4rem);
+}
+
+.plan ::deep .listing-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.meta {
+    margin: 0.35rem 0 0;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.dims {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin: 1rem 0;
+    border-block: 1px solid var(--rule);
+}
+
+.dims div {
+    padding: 0.6rem 0;
+}
+
+.dims div + div {
+    border-left: 1px solid var(--rule);
+    padding-left: 0.7rem;
+}
+
+.dims dt {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+.dims dd {
+    margin: 2px 0 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.listing-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.price {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.plan ::deep .btn.btn-view {
+    min-width: 0;
+    padding: 0;
+    font-size: 0.7rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.plan ::deep .btn.btn-view:hover {
+    background-color: transparent;
+    color: var(--mud-palette-text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* ---------- A-2 · Locations ---------- */
+.place {
+    cursor: pointer;
+}
+
+.place .frame {
+    border-radius: 2px;
+}
+
+.place-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--mud-palette-text-primary);
+}
+
+.place-name {
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+.place-count {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- A-3 · Process ---------- */
+.steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.step {
+    display: flex;
+    gap: 1.1rem;
+    align-items: baseline;
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+    border-top: 1px solid var(--rule);
+}
+
+.step:nth-child(odd) {
+    border-right: 1px solid var(--rule);
+}
+
+.step-no {
+    flex: none;
+    padding: 2px 6px;
+    border: 1px solid var(--marker);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--mud-palette-text-primary);
+}
+
+.plan ::deep .step-h {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 0.3rem;
+}
+
+.step-body {
+    margin: 0;
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- A-4 · Quote ---------- */
+.quote {
+    margin: 1.5rem 0 0;
+    padding-left: clamp(1.25rem, 3vw, 2rem);
+    border-left: 2px solid var(--marker);
+    max-width: 62ch;
+}
+
+.plan ::deep .quote-text {
+    font-size: clamp(1.4rem, 2.6vw, 2rem);
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.quote-by {
+    display: block;
+    margin-top: 1.1rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- A-5 · Book (the one filled block) ---------- */
+.sheet.cta {
+    border-top: 0;
+    margin-top: clamp(3rem, 7vw, 6rem);
+    padding: clamp(2.5rem, 6vw, 4.5rem);
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 2px;
+}
+
+.eyebrow-invert {
+    color: rgba(243, 240, 233, 0.6);
+}
+
+.plan ::deep .cta-h {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 700;
+    color: var(--paper);
+    margin: 0;
+}
+
+.cta-sub {
+    margin: 0.75rem 0 1.75rem;
+    max-width: 48ch;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: rgba(243, 240, 233, 0.75);
+}
+
+/* ---------- Buttons ---------- */
+.plan ::deep .btn {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    padding: 0.85rem 1.4rem;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.plan ::deep .btn-solid {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.plan ::deep .btn-solid:hover {
+    background: var(--marker);
+    color: var(--ink);
+}
+
+.plan ::deep .btn-ghost {
+    background: transparent;
+    color: var(--mud-palette-text-primary);
+    border: 1px solid var(--rule);
+}
+
+.plan ::deep .btn-ghost:hover {
+    border-color: var(--mud-palette-text-primary);
+}
+
+.plan ::deep .btn-marker {
+    background: var(--marker);
+    color: var(--ink);
+}
+
+.plan ::deep .btn-marker:hover {
+    background: var(--paper);
+}
+
+.plan ::deep .btn-ghost-invert {
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid rgba(243, 240, 233, 0.35);
+}
+
+.plan ::deep .btn-ghost-invert:hover {
+    border-color: var(--paper);
+}
+
+.plan ::deep .btn:focus-visible {
+    outline: 2px solid var(--marker);
+    outline-offset: 3px;
+}
+
+/* ---------- Colophon ---------- */
+.colophon {
+    margin: clamp(2.5rem, 6vw, 4rem) 0 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---------- Focus (plain elements) ---------- */
+.place:focus-visible {
+    outline: 2px solid var(--marker);
+    outline-offset: 3px;
+}
+
+/* ---------- Load sequence ---------- */
+@keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes draw {
+    from { max-width: 0; }
+    to   { max-width: 340px; }
+}
+
+.hero .eyebrow { animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.hero ::deep .hero-h { animation: rise 0.7s 0.06s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.lede          { animation: rise 0.7s 0.13s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.dimline       { animation: draw 0.9s 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.hero-actions  { animation: rise 0.7s 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.hero-figure   { animation: rise 0.8s 0.1s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+    .hero {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+    .hero-figure {
+        order: -1;
+        max-width: 460px;
+    }
+}
+
+@media (max-width: 700px) {
+    .steps { grid-template-columns: 1fr; }
+    .step:nth-child(odd) { border-right: 0; }
+}
+
+@media (max-width: 620px) {
+    .grid-3 { grid-template-columns: 1fr; }
+    .dims dd { font-size: 1rem; }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 560px) {
+    .sheet {
+        padding-block: 2.75rem;
+    }
+
+    .sheet.cta {
+        margin-top: 2.75rem;
+        padding: 1.75rem 1.4rem;
+    }
+
+    .grid-4 { grid-template-columns: 1fr; }
+
+    /* stacked, full-width, thumb-sized actions */
+    .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+
+    .plan ::deep .hero-actions .btn {
+        width: 100%;
+        padding: 0.95rem 1.4rem;
+    }
+
+    /* shorter, landscape hero image so copy stays above the fold */
+    .hero-figure {
+        max-width: none;
+    }
+
+    .hero-figure .frame {
+        aspect-ratio: 4 / 3;
+    }
+
+    /* roomier tap target for the inline text action */
+    .listing-foot {
+        align-items: center;
+    }
+
+    .plan ::deep .btn.btn-view {
+        padding: 0.5rem 0;
+    }
+
+    .step {
+        gap: 0.9rem;
+        padding: 1.6rem 0.25rem;
+    }
+
+    .quote {
+        padding-left: 1rem;
+    }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .plan *,
+    .plan *::before,
+    .plan *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+    .plan ::deep .card.listing {
+        transition: none;
+    }
+    .plan ::deep .card.listing:hover {
+        transform: none;
+    }
+}

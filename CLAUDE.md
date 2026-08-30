@@ -32,12 +32,11 @@ Keep this block updated with the real project paths after scaffolding.
 ## Claude Code plugins & skills
 
 AI tooling for this repo is pinned in `.claude/settings.json` (committed). It
-declares three marketplaces and enables their plugins:
+declares two marketplaces and enables their plugins:
 
 | Marketplace | Source | Plugins |
 |---|---|---|
 | `dotnet-agent-skills` | GitHub `dotnet/skills` | `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-data`, `dotnet-test`, `dotnet11` |
-| `claude-plugins-official` | GitHub `anthropics/claude-plugins-official` | `csharp-lsp` |
 | `mudblazor-agent-skills` | GitHub `CarlNaddy/claude-plugins-dotnet` | `mudblazor` |
 
 **Onboarding:** open the repo in Claude Code and accept the prompts to trust the
@@ -47,10 +46,24 @@ committed — it is cached under `~/.claude/plugins/` and re-fetched from GitHub
 Keep `.claude/settings.json` to project config only; personal prefs (`theme`,
 etc.) belong in your user `~/.claude/settings.json`.
 
-**Requires Claude Code newer than 2.1.251.** Older builds reject the `dotnet`
-plugin's `lsp.json` (newer multi-server schema) with an "invalid LSP server
-config" error; the skills still load but the bundled C# language server does not.
-Run `claude update` if you hit it.
+### C# language server
+
+The `dotnet` plugin supplies the C# LSP (go-to-definition, find-references,
+diagnostics for `.cs` / `.razor`). A second `csharp-lsp` plugin from
+`anthropics/claude-plugins-official` used to duplicate it and has been removed —
+two servers registered for one file type is a known failure mode.
+
+For the server to start (the skills load regardless):
+
+- **.NET 10 SDK on PATH.** It launches `dnx roslyn-language-server`, and `dnx`
+  ships only with the .NET 10 SDK; with only .NET 8 present it never starts.
+  Check `dotnet --list-sdks`; add .NET 10 via `dotnet:setup-local-sdk`.
+- **A Claude Code build that accepts the plugin's multi-server `lsp.json`.**
+  Older builds reject it with "invalid LSP server config". 2.1.251 (the newest
+  release as of 2026-08) may already be fine — confirm the load state in
+  `/plugin` → `dotnet@dotnet-agent-skills`.
+
+No `.cs` files exist until the app is scaffolded, so this is low priority for now.
 
 ### Which skill for which task
 

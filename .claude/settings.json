@@ -1,4 +1,13 @@
 {
+  "enabledPlugins": {
+    "dotnet@dotnet-agent-skills": true,
+    "dotnet-aspnetcore@dotnet-agent-skills": true,
+    "dotnet-blazor@dotnet-agent-skills": true,
+    "dotnet-data@dotnet-agent-skills": true,
+    "dotnet-test@dotnet-agent-skills": true,
+    "dotnet11@dotnet-agent-skills": true,
+    "mudblazor@mudblazor-agent-skills": true
+  },
   "extraKnownMarketplaces": {
     "dotnet-agent-skills": {
       "source": {
@@ -12,15 +21,5 @@
         "repo": "CarlNaddy/claude-plugins-dotnet"
       }
     }
-  },
-  "enabledPlugins": {
-    "dotnet@dotnet-agent-skills": true,
-    "dotnet-aspnetcore@dotnet-agent-skills": true,
-    "dotnet-blazor@dotnet-agent-skills": true,
-    "dotnet-data@dotnet-agent-skills": true,
-    "dotnet-test@dotnet-agent-skills": true,
-    "dotnet11@dotnet-agent-skills": true,
-    "csharp-lsp@claude-plugins-official": true,
-    "mudblazor@mudblazor-agent-skills": true
   }
 }

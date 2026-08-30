@@ -84,3 +84,17 @@ dotnet build
 
 MudBlazor 9.9.0 is used (not the v8 the skill references) because it is the
 current stable release and its package targets `net10.0`; v8 does not.
+
+## 6. Pin the SDK; make the error page static SSR
+
+Added `global.json` pinning `sdk.version` to `10.0.400` with
+`rollForward: latestFeature` (requires .NET 10, tolerates newer feature bands).
+`Error.razor` now carries `[ExcludeFromInteractiveRouting]` and `App.razor`
+computes `PageRenderMode` via `HttpContext.AcceptsInteractiveRouting()`, so the
+error page renders static SSR (its `HttpContext` cascade works) while every
+other page stays global Interactive Server. Verified:
+
+```bash
+dotnet --version   # 10.0.400 (resolved via global.json)
+dotnet build       # Build succeeded. 0 Error(s)
+```

@@ -3,37 +3,23 @@
 
 <PageTitle>Weather</PageTitle>
 
-<h1>Weather</h1>
-
-<p>This component demonstrates showing data.</p>
+<MudText Typo="Typo.h4" GutterBottom="true">Weather</MudText>
+<MudText Class="mb-4">This component demonstrates showing data.</MudText>
 
 @if (forecasts == null)
 {
-    <p><em>Loading...</em></p>
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts)
-            {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <MudDataGrid T="WeatherForecast" Items="forecasts" Dense="true" Elevation="1">
+        <Columns>
+            <PropertyColumn Property="x => x.Date" Title="Date" Format="d" />
+            <PropertyColumn Property="x => x.TemperatureC" Title="Temp. (C)" />
+            <PropertyColumn Property="x => x.TemperatureF" Title="Temp. (F)" />
+            <PropertyColumn Property="x => x.Summary" Title="Summary" />
+        </Columns>
+    </MudDataGrid>
 }
 
 @code {

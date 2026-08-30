@@ -69,3 +69,18 @@ dotnet build
 
 No `global.json` is present, so `dotnet` resolves to the highest installed SDK
 (10.0.400). Add a `global.json` if the team/CI needs the SDK version pinned.
+
+## 5. Wire up MudBlazor
+
+Added `MudBlazor` 9.9.0 to `dotnetskills.csproj` and wired it per the
+`mudblazor:mudblazor` skill (services, imports, head/script tags, `MainLayout`
+providers), switched to global Interactive Server render mode, converted the
+template pages off Bootstrap, and deleted `wwwroot/bootstrap/`. Verified:
+
+```bash
+dotnet build
+# Build succeeded. 0 Error(s)
+```
+
+MudBlazor 9.9.0 is used (not the v8 the skill references) because it is the
+current stable release and its package targets `net10.0`; v8 does not.

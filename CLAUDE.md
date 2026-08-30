@@ -11,7 +11,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 |---|---|
 | Framework | .NET 10 (adjust `global.json` if pinning; use `dotnet:setup-local-sdk` for a preview SDK) |
 | Web | ASP.NET Core, Blazor Web App template |
-| Render mode | _TBD_ — use Interactive Server or Auto; Static SSR alone can't drive most MudBlazor components |
+| Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
 | Data access | _TBD_ (EF Core expected) |
 | Tests | _TBD_ (xUnit expected) |

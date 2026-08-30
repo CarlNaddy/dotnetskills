@@ -46,24 +46,9 @@ committed — it is cached under `~/.claude/plugins/` and re-fetched from GitHub
 Keep `.claude/settings.json` to project config only; personal prefs (`theme`,
 etc.) belong in your user `~/.claude/settings.json`.
 
-### C# language server
-
-The `dotnet` plugin supplies the C# LSP (go-to-definition, find-references,
-diagnostics for `.cs` / `.razor`). A second `csharp-lsp` plugin from
-`anthropics/claude-plugins-official` used to duplicate it and has been removed —
-two servers registered for one file type is a known failure mode.
-
-For the server to start (the skills load regardless):
-
-- **.NET 10 SDK on PATH.** It launches `dnx roslyn-language-server`, and `dnx`
-  ships only with the .NET 10 SDK; with only .NET 8 present it never starts.
-  Check `dotnet --list-sdks`; add .NET 10 via `dotnet:setup-local-sdk`.
-- **A Claude Code build that accepts the plugin's multi-server `lsp.json`.**
-  Older builds reject it with "invalid LSP server config". 2.1.251 (the newest
-  release as of 2026-08) may already be fine — confirm the load state in
-  `/plugin` → `dotnet@dotnet-agent-skills`.
-
-No `.cs` files exist until the app is scaffolded, so this is low priority for now.
+The `dotnet` plugin provides the C# LSP. It needs the **.NET 10 SDK** on PATH
+(`dnx roslyn-language-server`); with only .NET 8 installed it won't start — add
+one via `dotnet:setup-local-sdk`.
 
 ### Which skill for which task
 

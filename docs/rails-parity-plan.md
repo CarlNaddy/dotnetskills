@@ -134,8 +134,10 @@ Dependency order: **P0 → P1 → (P2, P3 in parallel) → P4 → P5**. P6 any t
 
 Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
 
-- [ ] **P0.1** Create a solution file (`dotnetskills.slnx`) and add the web project.
+- [x] **P0.1** Create a solution file (`dotnetskills.slnx`) and add the web project.
   _Skill:_ — · _Accept:_ `dotnet sln list` shows the project; build from the `.slnx`.
+  _Done:_ `dotnet new sln --format slnx` + `dotnet sln add`; `dotnet build
+  dotnetskills.slnx` succeeds; `CLAUDE.md` build block updated.
 - [ ] **P0.2** Decide project layering: stay single-project (fastest, Rails-like)
   vs split Web / Application / Domain / Infrastructure. Record the decision and
   rationale. _Skill:_ — · _Accept:_ decision written in `CLAUDE.md`.

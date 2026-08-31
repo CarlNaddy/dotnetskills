@@ -18,16 +18,17 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 
 ## Build / run / test
 
-Solution not created yet. Once it is:
+Solution file: `dotnetskills.slnx` (XML `.slnx` format). One project so far,
+`dotnetskills.csproj` (the Blazor Web App).
 
 ```bash
-dotnet restore
-dotnet build
-dotnet watch run --project <WebProject>   # dev loop
-dotnet test
+dotnet restore dotnetskills.slnx
+dotnet build dotnetskills.slnx
+dotnet watch run --project dotnetskills.csproj   # dev loop
+dotnet test dotnetskills.slnx                    # once a test project exists (P2.1)
 ```
 
-Keep this block updated with the real project paths after scaffolding.
+Keep this block updated as projects are added to the solution.
 
 ## Claude Code plugins & skills
 

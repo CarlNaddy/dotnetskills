@@ -1,8 +1,9 @@
 # dotnetskills — .NET monolith template
 
 A ready-to-run **ASP.NET Core Blazor** monolith, plus a curated **Claude Code**
-plugin/skill setup and coding conventions. Click **Use this template** and you
-have a working app in minutes.
+plugin/skill setup and coding conventions. Click **Use this template**, run one
+script, and you have a working app with a database, migrations, tests, and a
+worked CRUD example.
 
 ## Stack
 
@@ -20,17 +21,28 @@ EF migration conventions (`docs/ef-migrations.md`), an `en`/`de` localization
 scaffold, and a worked reference feature — `Listing` CRUD end to end
 (entity → migration → MudBlazor grid/form/dialog → seed data).
 
-## Use it for your own project
+## Prerequisites
+
+| Tool | Why | Get it |
+|---|---|---|
+| **.NET 10 SDK** | build / run / test | <https://dotnet.microsoft.com/download/dotnet/10.0> |
+| **Docker** | local PostgreSQL | <https://docs.docker.com/get-docker/> |
+| **Git + bash** | the setup scripts (Git Bash on Windows) | <https://git-scm.com/downloads> |
+| Node 18+ *(optional)* | OpenSpec, for spec-driven development | <https://nodejs.org> |
+
+Run `bash scripts/preflight.sh` any time to check these.
+
+## Create a project from this template
 
 1. On GitHub click **Use this template → Create a new repository**, then clone it.
-2. Rename it (needs **bash** — Git Bash on Windows):
+2. Rename it (runs `preflight.sh` first, then the rename):
    ```bash
    bash scripts/new-project.sh Acme.Portal
    ```
    Replaces the `dotnetskills` identifier and every `dotnetskills`-named file and
    folder, regenerates the `UserSecretsId`, resets this README, and removes the
    template's own history docs.
-3. Point at a database — edit `compose.yaml` (Postgres db/user/password) and:
+3. Point at a database — edit `compose.yaml` (Postgres db/user/password), then:
    ```bash
    dotnet user-secrets set "ConnectionStrings:Default" \
      "Host=localhost;Port=5432;Database=acmeportal;Username=acmeportal;Password=dev_only_change_me"
@@ -39,24 +51,45 @@ scaffold, and a worked reference feature — `Listing` CRUD end to end
    ```bash
    docker compose up -d db
    dotnet tool restore
-   dotnet run -- seed
+   dotnet run -- seed         # apply migrations + seed 5 sample listings
    dotnet build && dotnet test
-   dotnet watch run
+   dotnet watch run           # http://localhost:5xxx  →  Home, /listings
    ```
-5. Make `CLAUDE.md` yours; optionally strip the `Listing` sample feature;
-   `git rm scripts/new-project.sh docs/new-project.md`; commit.
+5. Make `CLAUDE.md` yours; optionally strip the `Listing` sample feature.
 6. Open the repo in Claude Code and accept the marketplace-trust prompts —
    `.claude/settings.json` carries the `dotnet*` / `mudblazor` plugins over.
+7. `git rm scripts/new-project.sh docs/new-project.md`, then commit.
 
 **Full step-by-step (verified end to end): [`docs/new-project.md`](docs/new-project.md).**
+
+## Build your features spec-first (optional)
+
+Set up [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven
+development:
+
+```bash
+bash scripts/setup-openspec.sh        # installs the CLI, runs `openspec init`
+```
+
+Then, in Claude Code:
+
+```
+/opsx:propose Add a Booking feature with CRUD and a status workflow
+/opsx:apply                            # implement the generated tasks
+/opsx:archive                          # fold the specs in when done
+```
+
+Implement the feature itself with the bundled skills — e.g. CRUD via
+`dotnet-data:create-datadriven-aspnetcore` + `mudblazor:mudblazor`, following the
+`Listing` feature as the pattern.
 
 ## Run this repo as-is
 
 ```bash
 docker compose up -d db
 dotnet tool restore
-dotnet run -- seed          # apply migrations + seed 5 sample listings
-dotnet watch run            # http://localhost:5xxx  →  Home, /listings
+dotnet run -- seed
+dotnet watch run
 dotnet test
 ```
 

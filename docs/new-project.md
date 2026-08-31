@@ -10,9 +10,13 @@ the sample feature.
 
 ## Prerequisites
 
-- .NET 10 SDK (`dotnet --version` → 10.0.x)
-- Docker (for local PostgreSQL)
-- Git, plus **bash** to run the rename script — on Windows use **Git Bash**
+- .NET 10 SDK (`dotnet --version` → 10.0.x) — <https://dotnet.microsoft.com/download/dotnet/10.0>
+- Docker (for local PostgreSQL) — <https://docs.docker.com/get-docker/>
+- Git, plus **bash** to run the scripts — on Windows use **Git Bash**
+- Node 18+ *(optional)* — only for OpenSpec (step 7) — <https://nodejs.org>
+
+`scripts/new-project.sh` runs `scripts/preflight.sh` first and stops if a
+required tool is missing; run `bash scripts/preflight.sh` yourself any time.
 
 ## One-time (maintainer of *this* repo)
 
@@ -128,7 +132,30 @@ dotnet ef database update
 dotnet build && dotnet test
 ```
 
-## Step 7 — Commit
+## Step 7 — (optional) Spec-driven development with OpenSpec
+
+To plan features as specs before implementing them:
+
+```bash
+bash scripts/setup-openspec.sh      # needs Node 18+; installs the CLI, runs `openspec init`
+```
+
+`openspec init` creates `openspec/` (`specs/`, `changes/`, `archive/`) and wires
+slash commands into Claude Code. Workflow:
+
+```
+/opsx:explore <idea>       weigh options
+/opsx:propose <feature>    -> openspec/changes/<id>/ : proposal.md, specs/, design.md, tasks.md
+/opsx:apply                implement the tasks
+/opsx:archive              fold the spec deltas into openspec/specs/, archive the change
+```
+
+Implement the feature with the bundled skills (CRUD via
+`dotnet-data:create-datadriven-aspnetcore` + `mudblazor:mudblazor`, etc.),
+following the `Listing` feature as the pattern. `openspec update` refreshes the
+agent guidance after CLI upgrades.
+
+## Step 8 — Commit
 
 ```bash
 git rm scripts/new-project.sh docs/new-project.md      # templating helpers, no longer needed
@@ -136,7 +163,7 @@ git add -A
 git commit -m "Initialize from template"
 ```
 
-## Step 8 — Claude Code
+## Step 9 — Claude Code
 
 Open the new repo in Claude Code and accept the marketplace-trust prompts —
 `.claude/settings.json` carries over unchanged, so the same `dotnet*` /
@@ -150,7 +177,8 @@ Open the new repo in Claude Code and accept the marketplace-trust prompts —
 |---|---|
 | `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-*.md`, `docs/setup-log.md` (script removes these) |
 | `CLAUDE.md` — Stack, Data access, MudBlazor, Conventions | `CLAUDE.md` status blockquote + "Reuse" section; `README.md` (script stubs it — flesh it out) |
-| `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `scripts/new-project.sh`, `docs/new-project.md` (step 7) |
+| `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `scripts/new-project.sh`, `docs/new-project.md` (step 8) |
+| `scripts/preflight.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | — keep |
 | `compose.yaml` shape | its Postgres identifiers (step 3) |
 | `Program.cs` wiring (MudBlazor, EF factory, localization) | `SeedCommand` dispatch — only if you remove `Data/Seed/` (step 6) |
 | `Data/AppDbContext.cs` shell, `Endpoints/`, `Localization/`, `Resources/` | `Components/Pages/Listings/`, `Data/Listing.cs` — only if you do step 6 |

@@ -23,6 +23,10 @@ cd "$ROOT"
 
 [ -n "$NEW" ]        || { echo "usage: scripts/new-project.sh <NewName>" >&2; exit 2; }
 [ "$NEW" != "$OLD" ] || { echo "name unchanged; nothing to do" >&2; exit 1; }
+
+"$ROOT/scripts/preflight.sh" || exit 1
+echo
+
 [ -z "$(git status --porcelain)" ] || { echo "working tree is dirty — commit or stash first" >&2; exit 1; }
 
 echo "==> Replacing identifier '$OLD' -> '$NEW' in tracked text files"
@@ -86,8 +90,10 @@ Mechanical rename done. Remaining manual steps:
   4. (optional) drop the Listing reference feature — steps in docs/new-project.md.
   5. docker compose up -d db && dotnet tool restore && dotnet ef database update
   6. dotnet build && dotnet test && dotnet format ${NEW}.slnx --verify-no-changes
-  7. Remove the templating helpers you no longer need:
+  7. (optional) spec-driven development:  bash scripts/setup-openspec.sh
+       then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
+  8. Remove the templating helpers you no longer need:
        git rm scripts/new-project.sh docs/new-project.md
-     (keep docs/ef-migrations.md — the EF migration conventions still apply.)
-  8. git add -A && git commit -m "Initialize from template"
+     (keep scripts/preflight.sh, scripts/setup-openspec.sh, docs/ef-migrations.md.)
+  9. git add -A && git commit -m "Initialize from template"
 EOF

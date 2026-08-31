@@ -9,4 +9,15 @@
     <PackageReference Include="MudBlazor" Version="9.9.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- EF Core 10 + PostgreSQL — see CLAUDE.md "Data access". Npgsql brings
+         Microsoft.EntityFrameworkCore(.Relational) transitively. Design is
+         build-only (dotnet ef / migrations). -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>

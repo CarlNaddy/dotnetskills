@@ -223,9 +223,14 @@ EF Core provider + migrations workflow throughout.
   `compose.yaml` (MS Docker Compose pattern; file created in P1.2). Connection
   string key `ConnectionStrings:Default` — user-secrets in dev, env var in prod.
   Recorded in the new `CLAUDE.md` "Data access" section.
-- [ ] **P1.2** Add packages: `Microsoft.EntityFrameworkCore`, the provider
+- [x] **P1.2** Add packages: `Microsoft.EntityFrameworkCore`, the provider
   package, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`).
   _Skill:_ `create-datadriven-aspnetcore` · _Accept:_ `dotnet build` clean.
+  _Done:_ `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3 (brings
+  `Microsoft.EntityFrameworkCore` transitively) + `Microsoft.EntityFrameworkCore.Design`
+  10.0.11 (`PrivateAssets=all`, build-only). Added `compose.yaml` with a
+  `postgres:17` `db` service (named volume, healthcheck) — the P1.1 local-dev
+  story. Clean `--no-incremental` build; `docker compose config` valid.
 - [ ] **P1.3** Create `AppDbContext`, register with `AddDbContext`, add the
   connection string to `appsettings*.json`. _Skill:_ `create-datadriven-aspnetcore`
   · _Accept:_ app starts with the context resolvable from DI.

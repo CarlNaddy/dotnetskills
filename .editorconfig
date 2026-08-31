@@ -116,3 +116,9 @@ dotnet_diagnostic.CA1707.severity = none   # underscores in member names (test m
 [*.{razor,razor.cs}]
 # Blazor components are partial classes generated with public members by design.
 dotnet_diagnostic.CA1515.severity = none   # 'make type internal' — components must stay public
+
+[Data/Migrations/*.cs]
+# EF Core writes these — don't hold generated code to the repo's style rules.
+generated_code = true
+charset = utf-8-bom
+dotnet_diagnostic.IDE0161.severity = none   # block-scoped namespace, as generated

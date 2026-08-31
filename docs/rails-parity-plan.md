@@ -148,7 +148,9 @@ Item 5 has no skill or library behind it and is net-new work.
 - [x] `global.json` pins SDK to 10.0.400, `rollForward: latestFeature`
 - [x] MudBlazor 9.9.0 wired (services, imports, providers in `MainLayout`, script order); Bootstrap removed
 - [x] Global Interactive Server render mode; `Error.razor` forced to static SSR via `[ExcludeFromInteractiveRouting]`
-- [x] First feature page committed (Havenly landing page + gallery dialog)
+- [x] First feature page (Havenly landing page + gallery dialog) — _on the
+  unmerged `havenly-landing-page` branch; treated as a throwaway example, not
+  merged to `main`_
 
 ---
 
@@ -214,6 +216,9 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
 Nothing in `dotnet-data` can act until a `DbContext` exists. Follow the official
 EF Core provider + migrations workflow throughout.
 
+_Order note: P1.8 was done before P1.6 and P1.7 — both of those need a real
+entity to work against (a column to rename; a row to seed)._
+
 - [x] **P1.1** Choose DB provider + local-dev DB story. **No .NET Aspire** — it is
   orchestration tooling built for multi-service apps and is overkill for a
   monolith. _Skill:_ — · _Accept:_ decision + connection strategy recorded in
@@ -264,10 +269,23 @@ EF Core provider + migrations workflow throughout.
   `dotnet run -- seed` verb. The `create-datadriven` skill forbids seeding in
   `Program.cs`, so this needs a deliberate choice. _Skill:_ — · _Accept:_ fresh
   clone → one command → working sample data.
-- [ ] **P1.8** End-to-end validation: one real domain entity with full CRUD via
+- [x] **P1.8** End-to-end validation: one real domain entity with full CRUD via
   `create-datadriven-aspnetcore`, UI in MudBlazor. _Skill:_
   `create-datadriven-aspnetcore` + `mudblazor` · _Accept:_ list/details/create/
-  edit/delete all work against the DB.
+  edit/delete all work against the DB. _(Done before P1.6/P1.7 — the migrations
+  worked-example and the seeder both need a real entity.)_
+  _Done:_ `Data/Listing.cs` (+ `ListingStatus` enum, stored as string) →
+  `AddListing` migration applied. CRUD components in
+  `Components/Pages/Listings/` (`Listings` grid, `ListingDetails`,
+  `ListingCreate`/`ListingEdit` sharing `ListingEditor`, `DeleteListingDialog`);
+  nav link added. Create / list / details / edit / delete each driven through
+  the real UI and confirmed in Postgres (`INSERT`, `UPDATE` of price+status,
+  `COUNT(*) = 0` after delete). Two fixes fell out of this:
+  `Program.cs` `AddDbContext` → **`AddDbContextFactory`** (MS "Blazor with EF
+  Core" — components outlive a request scope; refines P1.3), and a `MainLayout`
+  bug where `pa-4` on `MudMainContent` overrode its app-bar offset and hid the
+  top of every page. `.editorconfig` now exempts `Data/Migrations/*.cs` (EF
+  generates them with a BOM + block namespace).
 
 ### P2 — Testing
 

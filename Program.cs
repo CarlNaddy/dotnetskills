@@ -16,7 +16,9 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
         "Connection string 'Default' is not configured. Set it via user-secrets in "
         + "development or the ConnectionStrings__Default environment variable in production.");
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+// Factory, not AddDbContext: interactive Blazor components outlive a request
+// scope, so each operation creates a short-lived context (MS "Blazor with EF Core").
+builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 

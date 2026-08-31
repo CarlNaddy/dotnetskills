@@ -4,8 +4,19 @@ namespace dotnetskills.Data;
 
 /// <summary>
 /// The application's Entity Framework Core context. Entities are added to it as
-/// features land — the first one at rails-parity plan P1.8.
+/// features land.
 /// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<Listing> Listings => Set<Listing>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Listing>(listing =>
+        {
+            listing.Property(l => l.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+        });
+    }
 }

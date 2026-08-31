@@ -20,8 +20,13 @@
         <NavMenu />
     </MudDrawer>
 
-    <MudMainContent Class="pa-4">
-        @Body
+    <MudMainContent>
+        @* Padding goes on an inner wrapper, not MudMainContent itself — a `pa-*`
+           class on MudMainContent overrides the padding-top it uses to clear the
+           fixed MudAppBar, hiding the top of every page. *@
+        <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="pa-4">
+            @Body
+        </MudContainer>
     </MudMainContent>
 </MudLayout>
 

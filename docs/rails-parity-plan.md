@@ -247,9 +247,14 @@ EF Core provider + migrations workflow throughout.
   `EntityFrameworkCore.Design` package). `dotnet tool restore` succeeds;
   `dotnet tool run dotnet-ef --version` and `dotnet ef --version` both report
   10.0.11.
-- [ ] **P1.5** Create + apply the `InitialCreate` migration.
+- [x] **P1.5** Create + apply the `InitialCreate` migration.
   _Skill:_ `create-datadriven-aspnetcore` · _Accept:_ schema created; migration
   committed.
+  _Done:_ `dotnet ef migrations add InitialCreate -o Data/Migrations` (empty
+  `Up`/`Down` — no entities yet; establishes the pipeline + history table).
+  `dotnet ef database update` applied against the Docker Postgres;
+  `__EFMigrationsHistory` now holds `20260831164036_InitialCreate` (10.0.11).
+  Build clean with the generated files. First real table lands at P1.8.
 - [ ] **P1.6** Write a **migrations conventions doc** — reversible migrations,
   renames, data backfills, squashing, naming, and how CI applies them. This is
   the "no skill owns schema evolution" gap. _Skill:_ — · _Accept:_ `docs/` doc +

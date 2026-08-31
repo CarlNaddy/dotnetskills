@@ -1,6 +1,7 @@
 using dotnetskills.Components;
 using dotnetskills.Data;
 using dotnetskills.Data.Seed;
+using dotnetskills.Endpoints;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 
@@ -11,6 +12,13 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+string[] supportedCultures = ["en", "de"];
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture(supportedCultures[0])
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException(
@@ -39,10 +47,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRequestLocalization(localizationOptions);
 
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.MapCultureEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

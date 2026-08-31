@@ -16,7 +16,7 @@ indent_size = 4
 [*.{json,js,ts,css,html,yml,yaml}]
 indent_size = 2
 
-[*.{xml,csproj,props,targets,razor}]
+[*.{xml,csproj,props,targets,razor,resx}]
 indent_size = 2
 
 [*.md]

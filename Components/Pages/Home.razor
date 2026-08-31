@@ -1,7 +1,8 @@
 ﻿@page "/"
+@inject IStringLocalizer<SharedResource> L
 
-<PageTitle>Home</PageTitle>
+<PageTitle>@L["Nav_Home"]</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">Hello, world!</MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">@L["Home_Title"]</MudText>
 
-<MudText>Welcome to your new app.</MudText>
+<MudText>@L["Home_Welcome"]</MudText>

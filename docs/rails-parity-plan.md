@@ -209,13 +209,20 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
   _Done:_ **deleted** `Components/Pages/Counter.razor` + `Weather.razor` and their
   `NavMenu` links (Rails `new` ships a welcome page, not demo CRUD; real examples
   arrive at P1.8). Build clean after removal.
-- [ ] **P0.7** Localization foundation (**promoted from P6.1** — wanted early,
+- [x] **P0.7** Localization foundation (**promoted from P6.1** — wanted early,
   before UI text accumulates). Wire `AddLocalization`, a `Resources/` layout,
   `RequestLocalizationOptions` with the supported cultures, the culture
   middleware, and a culture selector in the layout, using `IStringLocalizer` per
   the official ASP.NET Core globalization docs. Runs in parallel with P1.
   _Skill:_ — (MS docs) · _Accept:_ the nav + one page switch between two cultures
   via the selector; the choice persists across requests (cookie).
+  _Done:_ `AddLocalization(ResourcesPath = "Resources")` + `UseRequestLocalization`
+  (`en` default, `de`). `Localization/SharedResource` marker +
+  `Resources/Localization/SharedResource[.de].resx` (satellite assembly builds).
+  `CultureSelector` (app bar) → `GET /culture/set` endpoint writes the
+  `.AspNetCore.Culture` cookie + `LocalRedirect`. Verified in the browser:
+  nav + `Home` switch en↔de via the menu; a fresh request with only the cookie
+  renders `de`. `CLAUDE.md` has a Localization convention section.
 
 ### P1 — Data layer (EF Core) — the critical blocker
 

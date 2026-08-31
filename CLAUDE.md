@@ -215,6 +215,21 @@ project.
   a code-behind `.razor.cs` once it passes ~30 lines; component-local styles go
   in a collocated `.razor.css`. All UI is MudBlazor — see the rules above.
 
+### Localization
+
+- `AddLocalization(o => o.ResourcesPath = "Resources")` +
+  `UseRequestLocalization`. Supported cultures: `en` (default), `de`.
+- Strings: inject `IStringLocalizer<SharedResource>` (marker type in
+  `Localization/`), look up by key. Translations live in
+  `Resources/Localization/SharedResource.<culture>.resx`; the neutral `.resx` is
+  the fallback / English.
+- Culture is a cookie (`.AspNetCore.Culture`). `CultureSelector` (app bar) hits
+  `GET /culture/set?culture=&redirectUri=` (`Endpoints/CultureEndpoints.cs`),
+  which writes the cookie and does a `LocalRedirect` — the full reload is what
+  makes a new Blazor Server circuit adopt the culture.
+- Only the nav + `Home` are localized so far (P0.7 is the foundation); localize
+  more strings as pages are touched.
+
 ### Tests
 
 - One test project: `tests/dotnetskills.Tests/` (xUnit v3, `namespace

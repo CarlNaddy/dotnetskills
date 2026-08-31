@@ -231,9 +231,15 @@ EF Core provider + migrations workflow throughout.
   10.0.11 (`PrivateAssets=all`, build-only). Added `compose.yaml` with a
   `postgres:17` `db` service (named volume, healthcheck) — the P1.1 local-dev
   story. Clean `--no-incremental` build; `docker compose config` valid.
-- [ ] **P1.3** Create `AppDbContext`, register with `AddDbContext`, add the
-  connection string to `appsettings*.json`. _Skill:_ `create-datadriven-aspnetcore`
-  · _Accept:_ app starts with the context resolvable from DI.
+- [x] **P1.3** Create `AppDbContext`, register with `AddDbContext`, add the
+  connection string. _Skill:_ `create-datadriven-aspnetcore` · _Accept:_ app
+  starts with the context resolvable from DI.
+  _Done:_ `Data/AppDbContext.cs` (empty context, primary ctor); registered in
+  `Program.cs` via `AddDbContext<AppDbContext>(o => o.UseNpgsql(...))` with a
+  guard that throws if `ConnectionStrings:Default` is unset. Dev value stored in
+  user-secrets (`UserSecretsId` added to the `.csproj`), not `appsettings`.
+  Verified: `docker compose up -d db`, app boots clean and serves `/` → 200,
+  no DI/EF errors.
 - [ ] **P1.4** Add local tool manifest `.config/dotnet-tools.json` with
   `dotnet-ef`; `dotnet tool restore`. _Skill:_ `create-datadriven-aspnetcore`
   · _Accept:_ `dotnet tool run dotnet-ef --version` works.

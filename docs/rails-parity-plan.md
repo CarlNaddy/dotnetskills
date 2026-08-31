@@ -442,11 +442,14 @@ deliverable is the plugin/skill config + conventions + docs; the app code is a
 worked example, not something to copy wholesale.
 
 - [x] **P7.1** Interim route — usable as a GitHub **template repository**
-  (Option A). `docs/new-project.md` checklist + `scripts/new-project.sh`
-  (identifier rename, `.csproj` rename, `UserSecretsId` regen, strip
-  template-journey docs; leaves the project compiling). `CLAUDE.md` "Reuse"
-  section points at it. Repo **Settings → "Template repository"** is enabled
-  (`is_template: true`), so **"Use this template"** is live on GitHub.
+  (Option A). Repo **Settings → "Template repository"** is enabled
+  (`is_template: true`); **"Use this template"** is live. `scripts/new-project.sh`
+  renames the identifier + all `dotnetskills`-named files/dirs (`.csproj`,
+  `.slnx`, `tests/`), regenerates `UserSecretsId`, and removes this repo's
+  history docs. `docs/new-project.md` is the full walkthrough. **Verified
+  end-to-end** on a fresh clone → `Acme.Portal`: renamed, `dotnet build` clean,
+  `dotnet run -- seed` applied 3 migrations + seeded, app served `/` and
+  `/listings` (200), `dotnet test` 3/3.
 - [ ] **P7.2** Real `dotnet new` custom template — the actual `rails new`
   capability. `.template.config/template.json` with parameters: project name,
   `--sample` (include/exclude the `Listing` feature), `--db` (sqlite|postgres).

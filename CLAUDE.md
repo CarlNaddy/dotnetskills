@@ -247,11 +247,13 @@ project.
 ## Reuse — starting a new project
 
 This repo doubles as a starting point for new .NET monoliths. Route: GitHub
-**"Use this template"** (a maintainer enables it under repo Settings), then
-`scripts/new-project.sh <NewName>` for the mechanical rename, then the manual
-follow-up. Full checklist: [`docs/new-project.md`](docs/new-project.md). A real
-`dotnet new` template — the `rails new` equivalent — is parity plan **P7.2**.
+**"Use this template"**, then `bash scripts/new-project.sh <NewName>` for the
+mechanical rename (identifier, `.csproj`/`.slnx`/`tests/` paths, `UserSecretsId`),
+then the manual follow-up. Full walkthrough, verified end-to-end:
+[`docs/new-project.md`](docs/new-project.md). A real `dotnet new` template — the
+`rails new` equivalent — is parity plan **P7.2**.
 
-`docs/rails-parity-*.md`, `docs/ef-migrations.md`, `docs/setup-log.md`, and
-`docs/new-project.md` are template-journey artifacts; `new-project.sh` deletes
-them from a spun-off project.
+`docs/rails-parity-*.md` and `docs/setup-log.md` are this repo's history and the
+script deletes them. `docs/ef-migrations.md` is kept (its conventions apply to
+any project). `scripts/new-project.sh` and `docs/new-project.md` are removed by
+hand once the new project is set up.

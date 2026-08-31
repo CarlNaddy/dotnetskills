@@ -1,53 +1,156 @@
-# Starting a new project from this repo
+# Starting a new project from this template
 
-This repo is a **reference app + a curated Claude Code setup**, usable as a
-starting point for new .NET monoliths. The app code is a worked example, not
-something to copy blindly — the reusable parts are the plugin/skill setup
-(`.claude/settings.json`), the conventions (`CLAUDE.md`), and the patterns the
-`Listing` feature demonstrates.
+This repo is a **reference app + a curated Claude Code setup**. It works as a
+GitHub *template repository* — you get a full, running .NET 10 / Blazor /
+MudBlazor / EF Core + PostgreSQL monolith, then rename it and (optionally) strip
+the sample feature.
 
-> A proper `dotnet new` template is the eventual goal — parity plan **P7.2**.
-> Until then this is the **GitHub template-repository** route (Option A).
+> A `dotnet new` template is the eventual goal (parity plan **P7.2**). Until then
+> this is the template-repo route, verified end-to-end.
 
-## One-time, by a maintainer of this repo
+## Prerequisites
 
-On GitHub: **Settings → General → check "Template repository"**. This cannot be
-done from the CLI. After that, the repo shows a **Use this template** button.
+- .NET 10 SDK (`dotnet --version` → 10.0.x)
+- Docker (for local PostgreSQL)
+- Git, plus **bash** to run the rename script — on Windows use **Git Bash**
 
-## Per new project
+## One-time (maintainer of *this* repo)
 
-1. **Create the repo** — click **Use this template → Create a new repository** on
-   GitHub. You get a fresh repo with no history.
-2. **Clone it**, then from the repo root:
-   ```bash
-   scripts/new-project.sh <NewName>      # e.g. Acme.Portal
-   ```
-   This replaces the `dotnetskills` identifier everywhere, renames the `.csproj`,
-   regenerates the `UserSecretsId`, and deletes the template-journey docs
-   (`rails-parity-*.md`, `ef-migrations.md`, `setup-log.md`, this file, and the
-   script itself). It leaves the project **compiling** — the `Listing` reference
-   feature is kept, just renamed.
-3. **Follow the manual steps** the script prints:
-   - `CLAUDE.md` — retitle; drop the parity-plan references; keep Stack, Data
-     access, MudBlazor rules, Conventions.
-   - `compose.yaml` — set `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD`.
-   - `dotnet user-secrets set "ConnectionStrings:Default" "...Database=<NewName>;Username=<NewName>;..."`
-   - Optionally remove the `Listing` feature (commands in the script output) and
-     regenerate `InitialCreate`.
-   - `docker compose up -d db && dotnet tool restore && dotnet ef database update`
-   - `dotnet build && dotnet format --verify-no-changes`
-   - `git commit -m "Initialize from template"`
-4. **Re-run onboarding for the Claude Code plugins** — open the new repo in
-   Claude Code and accept the marketplace-trust prompts (`.claude/settings.json`
-   is carried over unchanged).
+GitHub → **Settings → General → check "Template repository"**. Already done here —
+the repo shows a **Use this template** button.
+
+---
+
+## Step 1 — Create and clone
+
+On GitHub click **Use this template → Create a new repository**, then:
+
+```bash
+git clone https://github.com/<you>/<new-repo>.git
+cd <new-repo>
+```
+
+## Step 2 — Rename (scripted)
+
+```bash
+bash scripts/new-project.sh Acme.Portal        # your project name; a dotted name is fine
+```
+
+The working tree must be clean. The script:
+
+- replaces the `dotnetskills` identifier in every tracked text file
+  (namespaces, usings, `_Imports.razor`, `.slnx`, launch profiles, …);
+- renames `dotnetskills.csproj` → `Acme.Portal.csproj`,
+  `dotnetskills.slnx` → `Acme.Portal.slnx`, and
+  `tests/dotnetskills.Tests/` → `tests/Acme.Portal.Tests/`;
+- regenerates `<UserSecretsId>`;
+- deletes this repo's history docs (`rails-parity-plan.md`,
+  `rails-parity-assessment.md`, `setup-log.md`);
+- prints the remaining manual steps.
+
+The project still **compiles** after this — the `Listing` sample feature is kept,
+just renamed.
+
+## Step 3 — Point at your database
+
+Edit `compose.yaml` — set the Postgres identifiers (and the host port if 5432 is
+taken):
+
+```yaml
+    environment:
+      POSTGRES_DB: acmeportal
+      POSTGRES_USER: acmeportal
+      POSTGRES_PASSWORD: dev_only_change_me
+    ports:
+      - "5432:5432"
+```
+
+Store the dev connection string in user-secrets (run in the folder with
+`Acme.Portal.csproj`):
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Default" \
+  "Host=localhost;Port=5432;Database=acmeportal;Username=acmeportal;Password=dev_only_change_me"
+```
+
+## Step 4 — Bring it up
+
+```bash
+docker compose up -d db
+dotnet tool restore                 # dotnet-ef
+dotnet run -- seed                  # apply all migrations + seed 5 sample listings
+#   ...or, for an empty schema:  dotnet ef database update
+dotnet build
+dotnet test                         # xUnit v3 via MTP — 3 smoke tests pass
+dotnet watch run                    # http://localhost:5xxx  →  Home + /listings
+```
+
+If `dotnet format Acme.Portal.slnx --verify-no-changes` flags line endings, your
+clone checked files out as LF; run `git add --renormalize . && git checkout .`
+or ensure `git config --get core.autocrlf` is `true` before cloning.
+
+## Step 5 — Make it yours (`CLAUDE.md`)
+
+- Retitle; delete the status blockquote and the **"Reuse — starting a new
+  project"** section.
+- Keep: Stack table, **Data access**, **MudBlazor rules**, **Conventions**
+  (incl. Tests and Localization).
+- Fix the `docs/ef-migrations.md` link target if you keep that file (recommended
+  — the migration conventions still apply; its worked example just refers to the
+  sample feature).
+
+## Step 6 — (optional) Remove the `Listing` sample feature
+
+Not scripted — it's a judgement call. To do it:
+
+```bash
+git rm -r Components/Pages/Listings Data/Listing.cs Data/Seed Data/Migrations
+git rm tests/Acme.Portal.Tests/Data/ListingTests.cs
+mkdir Data/Migrations
+```
+
+Then edit:
+
+| File | Change |
+|---|---|
+| `Data/AppDbContext.cs` | remove `DbSet<Listing> Listings` and the `OnModelCreating` body |
+| `Program.cs` | remove `using Acme.Portal.Data.Seed;` and the `if (args.Contains(SeedCommand.Verb))` block |
+| `Components/Layout/NavMenu.razor` | drop the `listings` `MudNavLink` |
+| `Resources/Localization/SharedResource*.resx` | drop `Nav_Listings` (optional) |
+
+Then re-baseline the schema:
+
+```bash
+dotnet ef migrations add InitialCreate -o Data/Migrations
+docker compose down -v && docker compose up -d db
+dotnet ef database update
+dotnet build && dotnet test
+```
+
+## Step 7 — Commit
+
+```bash
+git rm scripts/new-project.sh docs/new-project.md      # templating helpers, no longer needed
+git add -A
+git commit -m "Initialize from template"
+```
+
+## Step 8 — Claude Code
+
+Open the new repo in Claude Code and accept the marketplace-trust prompts —
+`.claude/settings.json` carries over unchanged, so the same `dotnet*` /
+`mudblazor` plugins and skills apply.
+
+---
 
 ## What carries over vs. what to strip
 
-| Keep | Strip / rewrite |
+| Carries over | Strip / rewrite |
 |---|---|
-| `.claude/settings.json` (plugins/marketplaces) | `docs/rails-parity-*.md`, `docs/setup-log.md`, `docs/new-project.md` |
-| `CLAUDE.md` Stack / Data access / MudBlazor / Conventions | `CLAUDE.md` status blockquote + parity-plan pointers |
-| `Directory.Build.props`, `.editorconfig`, `global.json` | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/` (optional) |
-| `compose.yaml` shape (retarget the DB name) | existing `Data/Migrations/*` if the sample is removed |
-| `Program.cs` wiring (MudBlazor, EF factory) | `SeedCommand` dispatch in `Program.cs` if `Data/Seed/` is removed |
-| `Data/AppDbContext.cs` shell | `DbSet<Listing>` + its `OnModelCreating` block |
+| `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-*.md`, `docs/setup-log.md` (script removes these) |
+| `CLAUDE.md` — Stack, Data access, MudBlazor, Conventions | `CLAUDE.md` status blockquote + "Reuse" section |
+| `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `scripts/new-project.sh`, `docs/new-project.md` (step 7) |
+| `compose.yaml` shape | its Postgres identifiers (step 3) |
+| `Program.cs` wiring (MudBlazor, EF factory, localization) | `SeedCommand` dispatch — only if you remove `Data/Seed/` (step 6) |
+| `Data/AppDbContext.cs` shell, `Endpoints/`, `Localization/`, `Resources/` | `Components/Pages/Listings/`, `Data/Listing.cs` — only if you do step 6 |
+| `tests/<Name>.Tests/` harness (xUnit v3, MTP) | `ListingTests.cs` — only with step 6 |

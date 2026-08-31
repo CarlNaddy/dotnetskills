@@ -56,8 +56,20 @@ done
 find . -type d -empty -not -path './.git/*' -delete 2>/dev/null || true
 
 echo "==> Regenerating UserSecretsId"
-NEWID="$(uuidgen 2>/dev/null | tr 'A-Z' 'a-z' \
-    || powershell -NoProfile -Command '[guid]::NewGuid().ToString()' | tr -d '\r')"
+new_uuid() {
+    if command -v uuidgen >/dev/null 2>&1; then
+        uuidgen | tr 'A-Z' 'a-z'
+    elif [ -r /proc/sys/kernel/random/uuid ]; then
+        cat /proc/sys/kernel/random/uuid
+    else
+        # Git Bash / MSYS has neither — build a v4 UUID from /dev/urandom.
+        local b
+        b="$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')"
+        printf '%s-%s-4%s-8%s-%s\n' \
+            "${b:0:8}" "${b:8:4}" "${b:13:3}" "${b:17:3}" "${b:20:12}"
+    fi
+}
+NEWID="$(new_uuid)"
 sed -i "s#<UserSecretsId>.*</UserSecretsId>#<UserSecretsId>${NEWID}</UserSecretsId>#" "${NEW}.csproj"
 
 if [ "$with_sample" = 1 ]; then

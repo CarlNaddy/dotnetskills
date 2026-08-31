@@ -232,10 +232,11 @@ EF Core provider + migrations workflow throughout.
 _Order note: P1.8 was done before P1.6 and P1.7 — both of those need a real
 entity to work against (a column to rename; a row to seed)._
 
-_Scope note: the `Listing` entity + `Components/Pages/Listings/` CRUD are kept
-deliberately as the repo's **reference example** — "this is how an entity +
-migration + CRUD UI + seed is done here" — not as a real-estate product. New
-features copy the pattern._
+_Scope note: the `Listing` entity + `Components/Pages/Listings/` CRUD live in
+**this repo** as the P1 validation vehicle, the test fixture, and the
+`--with-sample` payload — not as a real-estate product. Projects spun off the
+template get it **stripped by default** (`scripts/remove-sample.sh`), matching
+`rails new`; `scripts/new-project.sh --with-sample` keeps it as a worked pattern._
 
 - [x] **P1.1** Choose DB provider + local-dev DB story. **No .NET Aspire** — it is
   orchestration tooling built for multi-service apps and is overkill for a
@@ -443,13 +444,15 @@ worked example, not something to copy wholesale.
 
 - [x] **P7.1** Interim route — usable as a GitHub **template repository**
   (Option A). Repo **Settings → "Template repository"** is enabled
-  (`is_template: true`); **"Use this template"** is live. `scripts/new-project.sh`
-  renames the identifier + all `dotnetskills`-named files/dirs (`.csproj`,
-  `.slnx`, `tests/`), regenerates `UserSecretsId`, and removes this repo's
-  history docs. `docs/new-project.md` is the full walkthrough. **Verified
-  end-to-end** on a fresh clone → `Acme.Portal`: renamed, `dotnet build` clean,
-  `dotnet run -- seed` applied 3 migrations + seeded, app served `/` and
-  `/listings` (200), `dotnet test` 3/3.
+  (`is_template: true`); **"Use this template"** is live. `README.md` is the
+  front door; `docs/new-project.md` the full walkthrough. Scripts:
+  `preflight.sh` (checks .NET 10 / Docker / Node), `new-project.sh` (rename all
+  `dotnetskills`-named files/dirs, regen `UserSecretsId`, reset README, drop
+  history docs, **strip the `Listing` sample by default** → clean skeleton;
+  `--with-sample` keeps it), `remove-sample.sh`, `setup-openspec.sh` (opt-in
+  `@fission-ai/openspec` for spec-driven feature work). **Both modes verified
+  end-to-end** on fresh clones: skeleton → build + 1 test pass; `--with-sample`
+  → build + 3 tests pass, seed applies 3 migrations.
 - [ ] **P7.2** Real `dotnet new` custom template — the actual `rails new`
   capability. `.template.config/template.json` with parameters: project name,
   `--sample` (include/exclude the `Listing` feature), `--db` (sqlite|postgres).

@@ -34,14 +34,18 @@ Run `bash scripts/preflight.sh` any time to check these.
 
 ## Create a project from this template
 
+You get a **clean skeleton** — the app fully wired (DB, MudBlazor, localization,
+tests) but no domain code, like `rails new`.
+
 1. On GitHub click **Use this template → Create a new repository**, then clone it.
-2. Rename it (runs `preflight.sh` first, then the rename):
+2. Rename it (runs `preflight.sh` first):
    ```bash
    bash scripts/new-project.sh Acme.Portal
    ```
    Replaces the `dotnetskills` identifier and every `dotnetskills`-named file and
-   folder, regenerates the `UserSecretsId`, resets this README, and removes the
-   template's own history docs.
+   folder, regenerates the `UserSecretsId`, resets this README, removes the
+   template's history docs, and **strips the `Listing` sample feature**. Pass
+   `--with-sample` to keep the worked CRUD example.
 3. Point at a database — edit `compose.yaml` (Postgres db/user/password), then:
    ```bash
    dotnet user-secrets set "ConnectionStrings:Default" \
@@ -51,14 +55,14 @@ Run `bash scripts/preflight.sh` any time to check these.
    ```bash
    docker compose up -d db
    dotnet tool restore
-   dotnet run -- seed         # apply migrations + seed 5 sample listings
-   dotnet build && dotnet test
-   dotnet watch run           # http://localhost:5xxx  →  Home, /listings
+   dotnet format Acme.Portal.slnx && dotnet build && dotnet test
+   dotnet watch run           # http://localhost:5xxx  →  Home
    ```
-5. Make `CLAUDE.md` yours; optionally strip the `Listing` sample feature.
+5. Make `CLAUDE.md` yours.
 6. Open the repo in Claude Code and accept the marketplace-trust prompts —
    `.claude/settings.json` carries the `dotnet*` / `mudblazor` plugins over.
-7. `git rm scripts/new-project.sh docs/new-project.md`, then commit.
+7. `git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md`,
+   then commit.
 
 **Full step-by-step (verified end to end): [`docs/new-project.md`](docs/new-project.md).**
 

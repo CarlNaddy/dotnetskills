@@ -37,7 +37,8 @@ cd <new-repo>
 ## Step 2 — Rename (scripted)
 
 ```bash
-bash scripts/new-project.sh Acme.Portal        # your project name; a dotted name is fine
+bash scripts/new-project.sh Acme.Portal                 # clean skeleton (recommended)
+bash scripts/new-project.sh Acme.Portal --with-sample   # keep the Listing CRUD example
 ```
 
 The working tree must be clean. The script:
@@ -51,10 +52,15 @@ The working tree must be clean. The script:
 - resets `README.md` to a short project stub;
 - deletes this repo's history docs (`rails-parity-plan.md`,
   `rails-parity-assessment.md`, `setup-log.md`);
+- **removes the `Listing` sample feature** (`scripts/remove-sample.sh`) unless
+  `--with-sample` — deletes `Components/Pages/Listings/`, `Data/Listing.cs`,
+  `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs`; empties `AppDbContext`;
+  drops the seed dispatch from `Program.cs` and the Listings nav link. A
+  placeholder test replaces `ListingTests`.
 - prints the remaining manual steps.
 
-The project still **compiles** after this — the `Listing` sample feature is kept,
-just renamed.
+The project **compiles** either way. A skeleton has no entities, migrations, or
+seed data — like `rails new`.
 
 ## Step 3 — Point at your database
 
@@ -83,16 +89,14 @@ dotnet user-secrets set "ConnectionStrings:Default" \
 ```bash
 docker compose up -d db
 dotnet tool restore                 # dotnet-ef
-dotnet run -- seed                  # apply all migrations + seed 5 sample listings
-#   ...or, for an empty schema:  dotnet ef database update
+dotnet format Acme.Portal.slnx      # normalise line endings from the rename
 dotnet build
-dotnet test                         # xUnit v3 via MTP — 3 smoke tests pass
-dotnet watch run                    # http://localhost:5xxx  →  Home + /listings
+dotnet test                         # xUnit v3 via MTP
+dotnet watch run                    # http://localhost:5xxx  →  Home
 ```
 
-If `dotnet format Acme.Portal.slnx --verify-no-changes` flags line endings, your
-clone checked files out as LF; run `git add --renormalize . && git checkout .`
-or ensure `git config --get core.autocrlf` is `true` before cloning.
+With `--with-sample`, also run `dotnet run -- seed` (applies the 3 migrations
+and seeds 5 listings) and the nav has a **Listings** page.
 
 ## Step 5 — Make it yours (`CLAUDE.md`)
 
@@ -100,37 +104,22 @@ or ensure `git config --get core.autocrlf` is `true` before cloning.
   project"** section.
 - Keep: Stack table, **Data access**, **MudBlazor rules**, **Conventions**
   (incl. Tests and Localization).
-- Fix the `docs/ef-migrations.md` link target if you keep that file (recommended
-  — the migration conventions still apply; its worked example just refers to the
-  sample feature).
+- Drop the `Listing` / `dotnet run -- seed` mentions (skeleton), and fix the
+  `docs/ef-migrations.md` link — its conventions still apply; the worked example
+  just refers to the (removed) sample.
 
-## Step 6 — (optional) Remove the `Listing` sample feature
+## Step 6 — Add your first model
 
-Not scripted — it's a judgement call. To do it:
-
-```bash
-git rm -r Components/Pages/Listings Data/Listing.cs Data/Seed Data/Migrations
-git rm tests/Acme.Portal.Tests/Data/ListingTests.cs
-mkdir Data/Migrations
-```
-
-Then edit:
-
-| File | Change |
-|---|---|
-| `Data/AppDbContext.cs` | remove `DbSet<Listing> Listings` and the `OnModelCreating` body |
-| `Program.cs` | remove `using Acme.Portal.Data.Seed;` and the `if (args.Contains(SeedCommand.Verb))` block |
-| `Components/Layout/NavMenu.razor` | drop the `listings` `MudNavLink` |
-| `Resources/Localization/SharedResource*.resx` | drop `Nav_Listings` (optional) |
-
-Then re-baseline the schema:
+Like `rails g model` / `rails g scaffold`:
 
 ```bash
+# create Data/<Entity>.cs, add DbSet<Entity> to AppDbContext, then:
 dotnet ef migrations add InitialCreate -o Data/Migrations
-docker compose down -v && docker compose up -d db
 dotnet ef database update
-dotnet build && dotnet test
 ```
+
+Use `dotnet-data:create-datadriven-aspnetcore` + `mudblazor:mudblazor` for the
+CRUD UI. (With `--with-sample`, the `Listing` feature is the worked pattern.)
 
 ## Step 7 — (optional) Spec-driven development with OpenSpec
 
@@ -158,7 +147,7 @@ agent guidance after CLI upgrades.
 ## Step 8 — Commit
 
 ```bash
-git rm scripts/new-project.sh docs/new-project.md      # templating helpers, no longer needed
+git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md   # templating helpers
 git add -A
 git commit -m "Initialize from template"
 ```
@@ -173,13 +162,14 @@ Open the new repo in Claude Code and accept the marketplace-trust prompts —
 
 ## What carries over vs. what to strip
 
-| Carries over | Strip / rewrite |
+| Carries over | Removed by the script |
 |---|---|
-| `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-*.md`, `docs/setup-log.md` (script removes these) |
-| `CLAUDE.md` — Stack, Data access, MudBlazor, Conventions | `CLAUDE.md` status blockquote + "Reuse" section; `README.md` (script stubs it — flesh it out) |
-| `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `scripts/new-project.sh`, `docs/new-project.md` (step 8) |
-| `scripts/preflight.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | — keep |
-| `compose.yaml` shape | its Postgres identifiers (step 3) |
-| `Program.cs` wiring (MudBlazor, EF factory, localization) | `SeedCommand` dispatch — only if you remove `Data/Seed/` (step 6) |
-| `Data/AppDbContext.cs` shell, `Endpoints/`, `Localization/`, `Resources/` | `Components/Pages/Listings/`, `Data/Listing.cs` — only if you do step 6 |
-| `tests/<Name>.Tests/` harness (xUnit v3, MTP) | `ListingTests.cs` — only with step 6 |
+| `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-*.md`, `docs/setup-log.md` |
+| `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs` *(kept with `--with-sample`)* |
+| `compose.yaml` shape | the `Listing` `DbSet` + `OnModelCreating` in `AppDbContext.cs`; the `SeedCommand` dispatch in `Program.cs`; the Listings nav link *(kept with `--with-sample`)* |
+| `Program.cs` wiring, `Endpoints/`, `Localization/`, `Resources/`, `tests/<Name>.Tests/` harness | — |
+| `scripts/preflight.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
+
+Remove by hand once set up: `scripts/new-project.sh`, `scripts/remove-sample.sh`,
+`docs/new-project.md`. Rewrite: `CLAUDE.md` title + "Reuse" section, `README.md`
+stub.

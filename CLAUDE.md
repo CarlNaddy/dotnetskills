@@ -18,17 +18,16 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 
 ## Build / run / test
 
-Solution file: `dotnetskills.slnx` (XML `.slnx` format). One project so far,
-`dotnetskills.csproj` (the Blazor Web App).
+One project: `dotnetskills.csproj` (the Blazor Web App). No solution file — work
+against the `.csproj` directly. A `.slnx` gets added when the test project lands
+(rails-parity plan P2.1).
 
 ```bash
-dotnet restore dotnetskills.slnx
-dotnet build dotnetskills.slnx
-dotnet watch run --project dotnetskills.csproj   # dev loop
-dotnet test dotnetskills.slnx                    # once a test project exists (P2.1)
+dotnet restore
+dotnet build
+dotnet watch run   # dev loop
+# dotnet test      # once the test project exists (plan P2.1)
 ```
-
-Keep this block updated as projects are added to the solution.
 
 ## Claude Code plugins & skills
 

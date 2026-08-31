@@ -163,12 +163,13 @@ milestone.
 
 Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
 
-- [x] **P0.1** ~~Create a solution file~~ — **de-scoped.** A single `.csproj` is
-  the working unit for now; `dotnet build` / `dotnet run` / `dotnet watch` all
-  operate on `dotnetskills.csproj` directly. A `.slnx` was added but is not
-  required and adds nothing with one project — revisit at **P2.1**, when the test
-  project makes a solution genuinely useful. _Skill:_ — · _Accept:_ n/a (build
-  and run work against the `.csproj`).
+- [x] **P0.1** No solution file. Work against `dotnetskills.csproj` directly
+  (`dotnet build` / `dotnet run` / `dotnet watch`). A `.slnx` only earns its keep
+  once a second project exists — add one at **P2.1**. _Skill:_ — · _Accept:_ repo
+  has no `.slnx`; the `CLAUDE.md` build block uses `.csproj` paths.
+  _Done:_ `dotnetskills.slnx` (added prematurely in `cf0657c`) removed; `CLAUDE.md`
+  "Build / run / test" block reverted to `.csproj` paths; `dotnet build` from the
+  `.csproj` clean (0 warnings, 0 errors).
 - [x] **P0.2** Decide project layering: stay single-project (fastest, Rails-like)
   vs split Web / Application / Domain / Infrastructure. Record the decision and
   rationale. _Skill:_ — · _Accept:_ decision written in `CLAUDE.md`.

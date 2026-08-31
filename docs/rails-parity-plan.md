@@ -138,9 +138,12 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
   _Skill:_ — · _Accept:_ `dotnet sln list` shows the project; build from the `.slnx`.
   _Done:_ `dotnet new sln --format slnx` + `dotnet sln add`; `dotnet build
   dotnetskills.slnx` succeeds; `CLAUDE.md` build block updated.
-- [ ] **P0.2** Decide project layering: stay single-project (fastest, Rails-like)
+- [x] **P0.2** Decide project layering: stay single-project (fastest, Rails-like)
   vs split Web / Application / Domain / Infrastructure. Record the decision and
   rationale. _Skill:_ — · _Accept:_ decision written in `CLAUDE.md`.
+  _Done:_ **single project** + concern folders (`Components/`, `Data/`,
+  `Features/`, `Endpoints/`); rationale and folder map recorded in the `CLAUDE.md`
+  "Project layout" section. Tests go in a separate `tests/` project (P2.1).
 - [ ] **P0.3** Add `Directory.Build.props` (`Nullable`, `ImplicitUsings`,
   `LangVersion`, analyzers, `TreatWarningsAsErrors`) and `.editorconfig`.
   _Skill:_ — · _Accept:_ `dotnet build` clean with analyzers enabled.

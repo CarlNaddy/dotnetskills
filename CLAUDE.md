@@ -112,5 +112,32 @@ Scaffolding alternative: `dotnet new install MudBlazor.Templates`.
 
 ## Conventions
 
-- _TBD_ — add naming, folder layout, and nullable/analyzer settings once the
-  solution exists.
+### Project layout (decided in P0.2)
+
+**Single project.** `dotnetskills.csproj` is the whole app; organize by concern
+in folders, not by extracting class-library projects.
+
+```
+dotnetskills.csproj
+  Components/    Blazor UI (Layout/, Pages/, shared components)
+  Data/          AppDbContext, entities, EF Core migrations, seeders
+  Features/      application logic — one folder per feature (services, handlers)
+  Endpoints/     minimal API endpoint groups
+  wwwroot/       static assets
+```
+
+Rationale: the parity goal is Rails-like throughput, and Rails is one deployable
+with convention-based folders. A single project keeps the inner loop fast (no
+cross-project references, one build, one `dotnet watch`) and matches how the
+`dotnet-data` / `dotnet-blazor` skills expect to scaffold. Compile-time layer
+enforcement (a `.Domain` with no dependencies, etc.) is not worth the ceremony
+at this size. Extract a project later only when a real reuse or deployment
+boundary appears — the folders above map cleanly onto `.Web` / `.Application` /
+`.Domain` / `.Infrastructure` if that day comes.
+
+Tests live in a separate project under `tests/` (added in P2.1), not in the web
+project.
+
+### Naming, nullable, analyzers
+
+- _TBD (P0.3 / P0.5)_ — `Directory.Build.props`, `.editorconfig`, analyzer level.

@@ -190,10 +190,13 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
   (naming rules, file-scoped namespaces, formatting). Clean `--no-incremental`
   build; `dotnet format --verify-no-changes` reports only `info`-level `var`
   suggestions. `EnforceCodeStyleInBuild` left `false` for now.
-- [ ] **P0.4** Add `Directory.Packages.props` (central package management); move
+- [x] **P0.4** Add `Directory.Packages.props` (central package management); move
   the MudBlazor version there. _Skill:_ — · _Accept:_ no versions left in `.csproj`.
-  _Note:_ low value while there is one project — fold into **P2.1** (do it when
-  the second project appears) unless it is trivially quick now.
+  _Done:_ folded into P2.1. `Directory.Packages.props` with
+  `ManagePackageVersionsCentrally` + `CentralPackageTransitivePinningEnabled`;
+  all versions moved out of both `.csproj` files. A transitive pin of
+  `Microsoft.EntityFrameworkCore.Relational` 10.0.11 resolves the
+  Npgsql-10.0.3-vs-Design-10.0.11 EF Core split that CPM surfaced.
 - [x] **P0.5** Fill in the `CLAUDE.md` "Conventions" section (naming, folder
   layout, nullable/analyzer policy) and the Build/run/test block with real paths.
   _Skill:_ `init` (assist) · _Accept:_ no `TBD` left in `CLAUDE.md`.
@@ -312,9 +315,16 @@ features copy the pattern._
 `dotnet-test` is strong on test *logic*; the gap is a test project on disk and a
 test-*data* convention.
 
-- [ ] **P2.1** Scaffold the test project (xUnit), wire into the solution + CI
+- [x] **P2.1** Scaffold the test project (xUnit), wire into the solution + CI
   discovery. _Skill:_ `scaffold-dotnet-test-project` · _Accept:_ `dotnet test`
   from the solution discovers and runs it.
+  _Done:_ recreated `dotnetskills.slnx` (web + test projects). Hand-written
+  `tests/dotnetskills.Tests/` — **xUnit v3** (`xunit.v3` 4.0.0), MTP mode via
+  `global.json` `"test": { "runner": "Microsoft.Testing.Platform" }`,
+  `OutputType=Exe`, no `Microsoft.NET.Test.Sdk`. `ProjectReference` to the web
+  project; `tests/**` excluded from the web project's globs (root-level Web SDK).
+  3 smoke tests on `Listing` + its data annotations. `dotnet test` → 3 passed.
+  CPM (P0.4) done in the same change.
 - [ ] **P2.2** Test-data strategy (FactoryBot analog): builder / object-mother
   pattern, `Bogus` for fake data. _Skill:_ `code-testing-agent` (assist)
   · _Accept:_ convention doc + one reusable builder.

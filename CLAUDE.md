@@ -14,21 +14,21 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Web | ASP.NET Core, Blazor Web App template |
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
-| Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; not yet wired — parity plan P1.2+ |
-| Tests | xUnit — test project added in the parity plan (P2.1) |
+| Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
+| Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
 
-One project: `dotnetskills.csproj` (the Blazor Web App). No solution file — work
-against the `.csproj` directly. A `.slnx` gets added when the test project lands
-(rails-parity plan P2.1).
+Solution `dotnetskills.slnx` holds the web app (`dotnetskills.csproj`) and the
+test project (`tests/dotnetskills.Tests/`). Package versions are centrally
+managed in `Directory.Packages.props`.
 
 ```bash
 docker compose up -d db     # PostgreSQL for local dev
 dotnet tool restore         # dotnet-ef (first run only)
 dotnet run -- seed          # apply migrations + seed sample data (idempotent)
 dotnet watch run            # dev loop
-# dotnet test               # once the test project exists (plan P2.1)
+dotnet test                 # xUnit v3 via the Microsoft Testing Platform
 ```
 
 ## Data access
@@ -172,10 +172,10 @@ project.
   (IDExxxx) rules run in the IDE and `dotnet format`, not the build —
   `EnforceCodeStyleInBuild` stays `false`; flip it to `true` once
   `dotnet format --verify-no-changes` runs clean (not a blocker).
-- Format check: `dotnet format --verify-no-changes`.
-- Central package management (`Directory.Packages.props`) is deferred until a
-  second project exists (parity plan P2.1); until then MudBlazor's version is
-  pinned in the `.csproj`.
+- Format check: `dotnet format dotnetskills.slnx --verify-no-changes`.
+- **Central package management** (`Directory.Packages.props`,
+  `ManagePackageVersionsCentrally=true` + transitive pinning): every version
+  lives there; `.csproj` `PackageReference`s carry no `Version`.
 
 ### Naming & style
 
@@ -214,6 +214,20 @@ project.
 - Global Interactive Server render mode (see the Stack table). Move `@code` into
   a code-behind `.razor.cs` once it passes ~30 lines; component-local styles go
   in a collocated `.razor.css`. All UI is MudBlazor — see the rules above.
+
+### Tests
+
+- One test project: `tests/dotnetskills.Tests/` (xUnit v3, `namespace
+  dotnetskills.Tests.*` mirroring the folder). Run with `dotnet test`.
+- **MTP mode:** `global.json` opts `dotnet test` into the Microsoft Testing
+  Platform (`"test": { "runner": "Microsoft.Testing.Platform" }`); the test
+  project is `OutputType=Exe`. No `Microsoft.NET.Test.Sdk`.
+- The web project is a Web SDK project at the repo root, so its `.csproj`
+  excludes `tests/**` from the default globs — keep that exclusion if the layout
+  changes.
+- Test method names: `Method_under_test_does_x` (underscores; CA1707 is off).
+  Assertions must be deterministic — no clock, network, process, or real
+  filesystem. Test-data builders/`Bogus` come in P2.2.
 
 ## Reuse — starting a new project
 

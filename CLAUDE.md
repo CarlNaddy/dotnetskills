@@ -207,11 +207,22 @@ project.
   feature folder. Anything that touches `DbContext` is `Scoped`.
 - EF Core entities are the model — query `DbContext` with LINQ from feature
   services or components; no repository layer (Guiding principle 4 in the parity
-  plan). Migration workflow: see the migrations convention doc (parity plan
-  P1.6) once written.
+  plan). Migration workflow: [`docs/ef-migrations.md`](docs/ef-migrations.md).
 
 ### Blazor
 
 - Global Interactive Server render mode (see the Stack table). Move `@code` into
   a code-behind `.razor.cs` once it passes ~30 lines; component-local styles go
   in a collocated `.razor.css`. All UI is MudBlazor — see the rules above.
+
+## Reuse — starting a new project
+
+This repo doubles as a starting point for new .NET monoliths. Route: GitHub
+**"Use this template"** (a maintainer enables it under repo Settings), then
+`scripts/new-project.sh <NewName>` for the mechanical rename, then the manual
+follow-up. Full checklist: [`docs/new-project.md`](docs/new-project.md). A real
+`dotnet new` template — the `rails new` equivalent — is parity plan **P7.2**.
+
+`docs/rails-parity-*.md`, `docs/ef-migrations.md`, `docs/setup-log.md`, and
+`docs/new-project.md` are template-journey artifacts; `new-project.sh` deletes
+them from a spun-off project.

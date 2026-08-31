@@ -31,9 +31,12 @@ A developer can, without leaving the toolchain:
    updates.
 6. Write model, integration, and component tests with reusable test data.
 7. Run the whole stack locally with one command and deploy it with one pipeline.
+8. Start a **new** project from the same baseline in one step (`rails new`).
 
 Items 1-4 and 6-7 are mostly reachable with what we have once EF Core is wired.
-Item 5 has no skill or library behind it and is net-new work.
+Item 5 has no skill or library behind it and is net-new work. Item 8 is **P7** —
+the repo is a reference app; the reusable deliverable is the plugin/skill setup
++ conventions + (eventually) a `dotnet new` template.
 
 ---
 
@@ -157,9 +160,9 @@ Item 5 has no skill or library behind it and is net-new work.
 ## Open phases
 
 Dependency order: **P0 → P1 → (P2, P3 in parallel) → P4 → P5**. P0.7 (localization)
-runs alongside P1. P6 any time. Items tagged **(vNext)** — full OpenTelemetry
-(P4.6) and a Redis backplane (P4.3 / P5.2) — are out of scope for the first
-milestone.
+runs alongside P1. P6 and P7 any time. Items tagged **(vNext)** — full
+OpenTelemetry (P4.6) and a Redis backplane (P4.3 / P5.2) — are out of scope for
+the first milestone.
 
 ### P0 — Foundations & conventions
 
@@ -415,6 +418,27 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
 - [ ] **P6.3** `.http` request collections per API area. _Skill:_ `dotnet-webapi`
   · _Accept:_ checked-in `.http` covering each endpoint.
 
+### P7 — Packaging & reuse (the `rails new` analog)
+
+The repo is a working reference app + a curated Claude Code setup. The reusable
+deliverable is the plugin/skill config + conventions + docs; the app code is a
+worked example, not something to copy wholesale.
+
+- [x] **P7.1** Interim route — usable as a GitHub **template repository**
+  (Option A). `docs/new-project.md` checklist + `scripts/new-project.sh`
+  (identifier rename, `.csproj` rename, `UserSecretsId` regen, strip
+  template-journey docs; leaves the project compiling). `CLAUDE.md` "Reuse"
+  section points at it. _Manual step, cannot be scripted:_ a maintainer ticks
+  repo **Settings → "Template repository"** on GitHub. _Accept:_ a fresh copy
+  runs the script, does the manual follow-up, and builds.
+- [ ] **P7.2** Real `dotnet new` custom template — the actual `rails new`
+  capability. `.template.config/template.json` with parameters: project name,
+  `--sample` (include/exclude the `Listing` feature), `--db` (sqlite|postgres).
+  Test via `dotnet new install .` → `dotnet new <shortName> -n MyApp`. Optionally
+  publish as a NuGet template package so a team shares it. _Skill:_ — · _Accept:_
+  `dotnet new <shortName> -n Foo --sample false` yields a project that builds
+  with no `Listing` code.
+
 ---
 
 ## Gap → owning mechanism (quick reference)
@@ -438,3 +462,4 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
 | Deploy | SDK container publish / `compose.yaml` (MS docs) | ❌ net-new |
 | i18n | `IStringLocalizer` (built-in) | ⚠️ wire it — promoted to P0.7 |
 | `rails console` | DI-wired CLI verbs | ❌ net-new |
+| `rails new` (new project baseline) | GitHub template repo now; `dotnet new` template = P7.2 | ❌ net-new |

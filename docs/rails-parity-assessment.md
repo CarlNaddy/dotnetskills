@@ -48,6 +48,7 @@ reasons:
 
 | Rails capability | Status here |
 |---|---|
+| `rails new` (project baseline) | :x: No template — this repo is a reference app + Claude setup; GitHub template-repo is the interim, a `dotnet new` template is plan P7.2 |
 | Opinionated layout / conventions | :warning: Template only; `Conventions - TBD`, no solution or layering |
 | ActiveRecord ORM | :x: EF Core not installed |
 | Migrations, rollback, `schema.rb` | :warning: EF Core migrations exist as tooling; `create-datadriven` *uses* the lifecycle, but no skill owns schema evolution / rollback / data backfills |
@@ -147,3 +148,7 @@ the scoping decisions that shaped it are below.
   P0.7) — cheaper to wire in before UI text accumulates.
 - **Deployment follows official MS container guidance** (SDK container publish or
   the standard `Dockerfile`, plus `compose.yaml`) — no custom tooling.
+- **Reuse model:** the app is a worked reference, not the deliverable. The
+  reusable parts are `.claude/settings.json` (plugins/skills), the `CLAUDE.md`
+  conventions, and `docs/`. New projects: GitHub template-repo now (plan P7.1),
+  a `dotnet new` template as the target (P7.2 = the `rails new` analog).

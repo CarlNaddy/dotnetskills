@@ -24,10 +24,11 @@ against the `.csproj` directly. A `.slnx` gets added when the test project lands
 (rails-parity plan P2.1).
 
 ```bash
-dotnet restore
-dotnet build
-dotnet watch run   # dev loop
-# dotnet test      # once the test project exists (plan P2.1)
+docker compose up -d db     # PostgreSQL for local dev
+dotnet tool restore         # dotnet-ef (first run only)
+dotnet run -- seed          # apply migrations + seed sample data (idempotent)
+dotnet watch run            # dev loop
+# dotnet test               # once the test project exists (plan P2.1)
 ```
 
 ## Data access

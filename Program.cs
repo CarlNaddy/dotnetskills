@@ -1,5 +1,6 @@
 using dotnetskills.Components;
 using dotnetskills.Data;
+using dotnetskills.Data.Seed;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 
@@ -21,6 +22,13 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
+
+// `dotnet run -- seed`: apply migrations + seed sample data, then exit.
+if (args.Contains(SeedCommand.Verb))
+{
+    await SeedCommand.RunAsync(app.Services);
+    return;
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

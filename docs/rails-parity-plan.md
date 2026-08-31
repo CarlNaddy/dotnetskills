@@ -275,10 +275,17 @@ features copy the pattern._
   `Listing.AreaSqM` → `FloorAreaSqm`; EF Core 10 detected it and emitted a
   data-safe `RenameColumn` (a probe row's value survived `database update`). The
   doc covers when EF *doesn't* detect a rename and you must hand-edit.
-- [ ] **P1.7** Seed strategy: `IHostEnvironment`-gated seeder run at startup, or a
+- [x] **P1.7** Seed strategy: `IHostEnvironment`-gated seeder run at startup, or a
   `dotnet run -- seed` verb. The `create-datadriven` skill forbids seeding in
   `Program.cs`, so this needs a deliberate choice. _Skill:_ — · _Accept:_ fresh
   clone → one command → working sample data.
+  _Done:_ chose the **`dotnet run -- seed` verb** (Rails `db:seed` analog —
+  explicit, env-agnostic, no boot-time magic). `Data/Seed/DbSeeder.cs`
+  (idempotent, 5 sample listings) + `Data/Seed/SeedCommand.cs` (runs
+  `MigrateAsync()` first, so the one command also covers a fresh DB);
+  `Program.cs` dispatches the `seed` arg before the web host starts. Verified on
+  a wiped volume: run 1 applied all migrations + seeded 5; run 2 logged "Seed
+  skipped: 5 listing(s) already present."
 - [x] **P1.8** End-to-end validation: one real domain entity with full CRUD via
   `create-datadriven-aspnetcore`, UI in MudBlazor. _Skill:_
   `create-datadriven-aspnetcore` + `mudblazor` · _Accept:_ list/details/create/

@@ -111,6 +111,7 @@ dotnet_naming_style.camel.capitalization = camel_case
 # Async methods without await / ConfigureAwait noise in app code:
 dotnet_diagnostic.CA2007.severity = none   # ConfigureAwait(false) not needed in ASP.NET Core
 dotnet_diagnostic.CA1848.severity = none   # LoggerMessage delegates — revisit if logging is hot-path
+dotnet_diagnostic.CA1873.severity = none   # expensive log args — same call sites as CA1848
 dotnet_diagnostic.CA1707.severity = none   # underscores in member names (test methods)
 
 [*.{razor,razor.cs}]

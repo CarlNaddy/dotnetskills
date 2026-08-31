@@ -45,9 +45,12 @@ never diverge from production. Decided in parity plan P1.1; wiring starts at P1.
   (`ConnectionStrings__Default`).
 - **DbContext:** `AppDbContext` under `Data/`, registered with
   `AddDbContext<AppDbContext>(o => o.UseNpgsql(...))` (P1.3).
-- **Migrations:** `dotnet ef` via a local tool manifest (P1.4); the evolution
-  workflow (rollback, renames, backfills) is documented at P1.6. Entities are
-  the model — query `DbContext` directly, no repository layer.
+- **Migrations:** `dotnet ef` via a local tool manifest (`dotnet tool restore`
+  first). Workflow, naming, rename/backfill gotchas, rollback, squashing, and
+  the CI/deploy story are in [`docs/ef-migrations.md`](docs/ef-migrations.md).
+- **Seeding:** `dotnet run -- seed` — applies pending migrations, then inserts
+  sample data if the DB is empty (idempotent). Fresh clone → one command.
+- Entities are the model — query `DbContext` directly, no repository layer.
 
 ## Claude Code plugins & skills
 

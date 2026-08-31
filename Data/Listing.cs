@@ -43,7 +43,7 @@ public class Listing
 
     [Display(Name = "Area (m²)")]
     [Range(1, 100_000, ErrorMessage = "Area must be greater than zero.")]
-    public int AreaSqM { get; set; }
+    public int FloorAreaSqm { get; set; }
 
     public ListingStatus Status { get; set; } = ListingStatus.Draft;
 

@@ -219,6 +219,11 @@ EF Core provider + migrations workflow throughout.
 _Order note: P1.8 was done before P1.6 and P1.7 — both of those need a real
 entity to work against (a column to rename; a row to seed)._
 
+_Scope note: the `Listing` entity + `Components/Pages/Listings/` CRUD are kept
+deliberately as the repo's **reference example** — "this is how an entity +
+migration + CRUD UI + seed is done here" — not as a real-estate product. New
+features copy the pattern._
+
 - [x] **P1.1** Choose DB provider + local-dev DB story. **No .NET Aspire** — it is
   orchestration tooling built for multi-service apps and is overkill for a
   monolith. _Skill:_ — · _Accept:_ decision + connection strategy recorded in
@@ -260,11 +265,16 @@ entity to work against (a column to rename; a row to seed)._
   `dotnet ef database update` applied against the Docker Postgres;
   `__EFMigrationsHistory` now holds `20260831164036_InitialCreate` (10.0.11).
   Build clean with the generated files. First real table lands at P1.8.
-- [ ] **P1.6** Write a **migrations conventions doc** — reversible migrations,
+- [x] **P1.6** Write a **migrations conventions doc** — reversible migrations,
   renames, data backfills, squashing, naming, and how CI applies them. This is
   the "no skill owns schema evolution" gap. _Skill:_ — · _Accept:_ `docs/` doc +
   `CLAUDE.md` pointer; one non-trivial migration (e.g. a column rename) done as a
   worked example.
+  _Done:_ [`docs/ef-migrations.md`](ef-migrations.md); `CLAUDE.md` "Data access"
+  points at it. Worked example: `RenameAreaColumn` renamed
+  `Listing.AreaSqM` → `FloorAreaSqm`; EF Core 10 detected it and emitted a
+  data-safe `RenameColumn` (a probe row's value survived `database update`). The
+  doc covers when EF *doesn't* detect a rename and you must hand-edit.
 - [ ] **P1.7** Seed strategy: `IHostEnvironment`-gated seeder run at startup, or a
   `dotnet run -- seed` verb. The `create-datadriven` skill forbids seeding in
   `Program.cs`, so this needs a deliberate choice. _Skill:_ — · _Accept:_ fresh

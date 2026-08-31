@@ -37,7 +37,7 @@ else
                 <tr><td>Price</td><td>@_listing.Price.ToString("C0")</td></tr>
                 <tr><td>Bedrooms</td><td>@_listing.Bedrooms</td></tr>
                 <tr><td>Bathrooms</td><td>@_listing.Bathrooms</td></tr>
-                <tr><td>Area</td><td>@_listing.AreaSqM m²</td></tr>
+                <tr><td>Area</td><td>@_listing.FloorAreaSqm m²</td></tr>
                 <tr><td>Listed on</td><td>@_listing.ListedOn.ToString("yyyy-MM-dd")</td></tr>
                 <tr><td>Description</td><td>@(string.IsNullOrWhiteSpace(_listing.Description) ? "—" : _listing.Description)</td></tr>
             </tbody>

@@ -240,9 +240,13 @@ EF Core provider + migrations workflow throughout.
   user-secrets (`UserSecretsId` added to the `.csproj`), not `appsettings`.
   Verified: `docker compose up -d db`, app boots clean and serves `/` → 200,
   no DI/EF errors.
-- [ ] **P1.4** Add local tool manifest `.config/dotnet-tools.json` with
+- [x] **P1.4** Add local tool manifest `.config/dotnet-tools.json` with
   `dotnet-ef`; `dotnet tool restore`. _Skill:_ `create-datadriven-aspnetcore`
   · _Accept:_ `dotnet tool run dotnet-ef --version` works.
+  _Done:_ `.config/dotnet-tools.json` pins `dotnet-ef` 10.0.11 (matches the
+  `EntityFrameworkCore.Design` package). `dotnet tool restore` succeeds;
+  `dotnet tool run dotnet-ef --version` and `dotnet ef --version` both report
+  10.0.11.
 - [ ] **P1.5** Create + apply the `InitialCreate` migration.
   _Skill:_ `create-datadriven-aspnetcore` · _Accept:_ schema created; migration
   committed.

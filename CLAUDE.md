@@ -138,6 +138,18 @@ boundary appears — the folders above map cleanly onto `.Web` / `.Application` 
 Tests live in a separate project under `tests/` (added in P2.1), not in the web
 project.
 
-### Naming, nullable, analyzers
+### Naming, nullable, analyzers (P0.3)
 
-- _TBD (P0.3 / P0.5)_ — `Directory.Build.props`, `.editorconfig`, analyzer level.
+- **`Directory.Build.props`** (solution-wide): `Nullable` + `ImplicitUsings`
+  enable, `LangVersion` latest, `AnalysisMode` Recommended,
+  `TreatWarningsAsErrors` true. Compiler and .NET analyzer (CAxxxx) warnings
+  fail the build. Project `.csproj` files keep only project-specific settings
+  (`TargetFramework`, package references).
+- **`.editorconfig`**: CRLF, 4-space C# / 2-space markup, file-scoped
+  namespaces, `_camelCase` private fields, full naming rules. Code-style
+  (IDExxxx) rules run in the IDE and `dotnet format`, not the build yet —
+  `EnforceCodeStyleInBuild` stays `false` until the tree is clean (P0.5).
+- Format check: `dotnet format dotnetskills.slnx --verify-no-changes`.
+- _P0.4_ — central package management (`Directory.Packages.props`).
+- _P0.5_ — remaining naming/folder conventions; decide when to flip
+  `EnforceCodeStyleInBuild`.

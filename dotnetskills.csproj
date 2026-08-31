@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Nullable, ImplicitUsings, LangVersion, analyzers: see Directory.Build.props -->
   </PropertyGroup>
 
   <ItemGroup>

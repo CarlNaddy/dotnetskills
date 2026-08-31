@@ -144,9 +144,15 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
   _Done:_ **single project** + concern folders (`Components/`, `Data/`,
   `Features/`, `Endpoints/`); rationale and folder map recorded in the `CLAUDE.md`
   "Project layout" section. Tests go in a separate `tests/` project (P2.1).
-- [ ] **P0.3** Add `Directory.Build.props` (`Nullable`, `ImplicitUsings`,
+- [x] **P0.3** Add `Directory.Build.props` (`Nullable`, `ImplicitUsings`,
   `LangVersion`, analyzers, `TreatWarningsAsErrors`) and `.editorconfig`.
   _Skill:_ — · _Accept:_ `dotnet build` clean with analyzers enabled.
+  _Done:_ `Directory.Build.props` sets `AnalysisMode=Recommended` +
+  `TreatWarningsAsErrors=true` (CAxxxx warnings now fail the build); Nullable /
+  ImplicitUsings / LangVersion moved out of the `.csproj`. `.editorconfig` added
+  (naming rules, file-scoped namespaces, formatting). Clean `--no-incremental`
+  build; `dotnet format --verify-no-changes` reports only `info`-level `var`
+  suggestions. `EnforceCodeStyleInBuild` left `false` for now.
 - [ ] **P0.4** Add `Directory.Packages.props` (central package management); move
   the MudBlazor version there. _Skill:_ — · _Accept:_ no versions left in `.csproj`.
 - [ ] **P0.5** Fill in the `CLAUDE.md` "Conventions" section (naming, folder

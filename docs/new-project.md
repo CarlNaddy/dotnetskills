@@ -44,6 +44,7 @@ The working tree must be clean. The script:
   `dotnetskills.slnx` → `Acme.Portal.slnx`, and
   `tests/dotnetskills.Tests/` → `tests/Acme.Portal.Tests/`;
 - regenerates `<UserSecretsId>`;
+- resets `README.md` to a short project stub;
 - deletes this repo's history docs (`rails-parity-plan.md`,
   `rails-parity-assessment.md`, `setup-log.md`);
 - prints the remaining manual steps.
@@ -148,7 +149,7 @@ Open the new repo in Claude Code and accept the marketplace-trust prompts —
 | Carries over | Strip / rewrite |
 |---|---|
 | `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-*.md`, `docs/setup-log.md` (script removes these) |
-| `CLAUDE.md` — Stack, Data access, MudBlazor, Conventions | `CLAUDE.md` status blockquote + "Reuse" section |
+| `CLAUDE.md` — Stack, Data access, MudBlazor, Conventions | `CLAUDE.md` status blockquote + "Reuse" section; `README.md` (script stubs it — flesh it out) |
 | `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `scripts/new-project.sh`, `docs/new-project.md` (step 7) |
 | `compose.yaml` shape | its Postgres identifiers (step 3) |
 | `Program.cs` wiring (MudBlazor, EF factory, localization) | `SeedCommand` dispatch — only if you remove `Data/Seed/` (step 6) |

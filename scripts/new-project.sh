@@ -46,6 +46,26 @@ NEWID="$(uuidgen 2>/dev/null | tr 'A-Z' 'a-z' \
     || powershell -NoProfile -Command '[guid]::NewGuid().ToString()' | tr -d '\r')"
 sed -i "s#<UserSecretsId>.*</UserSecretsId>#<UserSecretsId>${NEWID}</UserSecretsId>#" "${NEW}.csproj"
 
+echo "==> Resetting README.md to a project stub"
+cat > README.md <<EOF
+# ${NEW}
+
+ASP.NET Core Blazor Web App — .NET 10, MudBlazor, EF Core + PostgreSQL.
+Started from the [dotnetskills](https://github.com/CarlNaddy/dotnetskills) template.
+
+## Run locally
+
+\`\`\`bash
+docker compose up -d db
+dotnet tool restore
+dotnet run -- seed        # apply migrations + seed sample data
+dotnet watch run
+dotnet test
+\`\`\`
+
+Conventions and AI tooling: see \`CLAUDE.md\`.
+EOF
+
 echo "==> Removing this repo's history docs"
 git rm -qf --ignore-unmatch \
     docs/rails-parity-plan.md \

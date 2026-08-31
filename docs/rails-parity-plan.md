@@ -37,6 +37,32 @@ Item 5 has no skill or library behind it and is net-new work.
 
 ---
 
+## Guiding principles
+
+1. **Monolith-first.** One project (`dotnetskills.csproj`), one database, one
+   deployable. No separate Domain / Application / Infrastructure projects, no
+   Clean-Architecture ceremony, no service extraction. This is the Rails
+   "Majestic Monolith" stance and the whole point of the exercise.
+2. **Microsoft-standard patterns win.** Prefer official .NET / ASP.NET Core
+   templates, APIs, and the installed `dotnet*` / `mudblazor` skills over
+   third-party libraries or bespoke infrastructure — for two reasons: they are
+   the most robust and best-supported path, and the AI agents are trained on
+   them, so agentic development stays smooth. Reach for a third-party library
+   only where Microsoft ships no first-party story (background jobs → Hangfire,
+   transactional email → MailKit) and keep it behind a thin seam.
+3. **Modules inside the monolith are fine.** Feature-folder organization and
+   light DDD tactical patterns (aggregates, value objects) are welcome *within*
+   the single project when they aid clarity — never at the cost of diverging
+   from a documented .NET standard.
+4. **EF Core entities are the model.** Query with `DbContext` + LINQ from feature
+   services or components. No repository layer or DTO-mapping tax until a real
+   API boundary demands it.
+5. **Release scoping.** Items tagged **(vNext)** are deliberately out of scope
+   for the first parity milestone; they are recorded so the design leaves room
+   for them, not so they get built now.
+
+---
+
 ## Inventory — what we already have
 
 ### Plugins (pinned in `.claude/settings.json`)
@@ -128,16 +154,21 @@ Item 5 has no skill or library behind it and is net-new work.
 
 ## Open phases
 
-Dependency order: **P0 → P1 → (P2, P3 in parallel) → P4 → P5**. P6 any time.
+Dependency order: **P0 → P1 → (P2, P3 in parallel) → P4 → P5**. P0.7 (localization)
+runs alongside P1. P6 any time. Items tagged **(vNext)** — full OpenTelemetry
+(P4.6) and a Redis backplane (P4.3 / P5.2) — are out of scope for the first
+milestone.
 
 ### P0 — Foundations & conventions
 
 Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
 
-- [x] **P0.1** Create a solution file (`dotnetskills.slnx`) and add the web project.
-  _Skill:_ — · _Accept:_ `dotnet sln list` shows the project; build from the `.slnx`.
-  _Done:_ `dotnet new sln --format slnx` + `dotnet sln add`; `dotnet build
-  dotnetskills.slnx` succeeds; `CLAUDE.md` build block updated.
+- [x] **P0.1** ~~Create a solution file~~ — **de-scoped.** A single `.csproj` is
+  the working unit for now; `dotnet build` / `dotnet run` / `dotnet watch` all
+  operate on `dotnetskills.csproj` directly. A `.slnx` was added but is not
+  required and adds nothing with one project — revisit at **P2.1**, when the test
+  project makes a solution genuinely useful. _Skill:_ — · _Accept:_ n/a (build
+  and run work against the `.csproj`).
 - [x] **P0.2** Decide project layering: stay single-project (fastest, Rails-like)
   vs split Web / Application / Domain / Infrastructure. Record the decision and
   rationale. _Skill:_ — · _Accept:_ decision written in `CLAUDE.md`.
@@ -155,20 +186,33 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
   suggestions. `EnforceCodeStyleInBuild` left `false` for now.
 - [ ] **P0.4** Add `Directory.Packages.props` (central package management); move
   the MudBlazor version there. _Skill:_ — · _Accept:_ no versions left in `.csproj`.
+  _Note:_ low value while there is one project — fold into **P2.1** (do it when
+  the second project appears) unless it is trivially quick now.
 - [ ] **P0.5** Fill in the `CLAUDE.md` "Conventions" section (naming, folder
   layout, nullable/analyzer policy) and the Build/run/test block with real paths.
   _Skill:_ `init` (assist) · _Accept:_ no `TBD` left in `CLAUDE.md`.
 - [ ] **P0.6** Decide the fate of template pages (`Counter`, `Weather`) — delete
   or keep as reference. _Skill:_ — · _Accept:_ decision applied.
+- [ ] **P0.7** Localization foundation (**promoted from P6.1** — wanted early,
+  before UI text accumulates). Wire `AddLocalization`, a `Resources/` layout,
+  `RequestLocalizationOptions` with the supported cultures, the culture
+  middleware, and a culture selector in the layout, using `IStringLocalizer` per
+  the official ASP.NET Core globalization docs. Runs in parallel with P1.
+  _Skill:_ — (MS docs) · _Accept:_ the nav + one page switch between two cultures
+  via the selector; the choice persists across requests (cookie).
 
 ### P1 — Data layer (EF Core) — the critical blocker
 
-Nothing in `dotnet-data` can act until a `DbContext` exists.
+Nothing in `dotnet-data` can act until a `DbContext` exists. Follow the official
+EF Core provider + migrations workflow throughout.
 
-- [ ] **P1.1** Choose DB provider + local-dev DB story: **SQLite** (zero-config,
-  closest to Rails' default) vs **PostgreSQL + Npgsql** with Docker Compose or
-  .NET Aspire for local infra. Note: choosing Aspire here also satisfies parts of
-  P4/P5. _Skill:_ — · _Accept:_ decision + connection strategy in `CLAUDE.md`.
+- [ ] **P1.1** Choose DB provider + local-dev DB story. Recommended:
+  **PostgreSQL + Npgsql** everywhere, with a standard `compose.yaml` running
+  Postgres locally (the Microsoft "ASP.NET Core with Docker Compose" pattern);
+  **SQLite** is the lighter alternative if a zero-infra dev loop matters more
+  than prod parity. **No .NET Aspire** — it is orchestration tooling built for
+  multi-service apps and is overkill for a monolith. _Skill:_ — · _Accept:_
+  decision + connection strategy recorded in `CLAUDE.md`.
 - [ ] **P1.2** Add packages: `Microsoft.EntityFrameworkCore`, the provider
   package, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`).
   _Skill:_ `create-datadriven-aspnetcore` · _Accept:_ `dotnet build` clean.
@@ -218,62 +262,88 @@ test-*data* convention.
 ### P3 — Authentication & authorization
 
 - [ ] **P3.1** Choose the model: **ASP.NET Core Identity** (self-contained, Devise
-  analog) vs external IdP. _Skill:_ `configure-auth` · _Accept:_ decision in
-  `CLAUDE.md`.
+  analog), with external OAuth2 providers layered on (P3.4). _Skill:_
+  `configure-auth` · _Accept:_ decision in `CLAUDE.md`.
 - [ ] **P3.2** Add Identity + EF stores; migration for the Identity tables.
   _Skill:_ `configure-auth` + `create-datadriven-aspnetcore` · _Accept:_ user
   tables migrated.
 - [ ] **P3.3** Login / logout / register / manage pages, respecting render mode
   (Identity UI as static SSR under a global-interactive app). _Skill:_
   `configure-auth` + `support-prerendering` · _Accept:_ register + sign in works.
-- [ ] **P3.4** Authorization: policies / roles, `[Authorize]` on a protected page,
+- [ ] **P3.4** External login providers (OAuth2): **Google** and **Microsoft** via
+  the first-party `Microsoft.AspNetCore.Authentication.Google` /
+  `.MicrosoftAccount` handlers; **GitHub** via `AspNet.Security.OAuth.GitHub`
+  (community handler — Microsoft ships none). Wire into Identity external logins;
+  provider secrets via user-secrets in dev. _Skill:_ `configure-auth` · _Accept:_
+  signing in with Google (and one more) creates / links an Identity user.
+- [ ] **P3.5** Authorization: policies / roles, `[Authorize]` on a protected page,
   `AuthorizeView` in the nav. _Skill:_ `configure-auth` · _Accept:_ anonymous hit
   on a protected route redirects to login.
-- [ ] **P3.5** Seed an admin user in the P1.7 seeder. _Skill:_ — · _Accept:_ known
+- [ ] **P3.6** Seed an admin user in the P1.7 seeder. _Skill:_ — · _Accept:_ known
   dev admin credentials.
 
 ### P4 — Batteries (no skill exists — net-new, document as you go)
 
-- [ ] **P4.1** Background jobs: pick **Hangfire** / **Quartz.NET** / **Aspire +
-  hosted services**. Implement one recurring + one fire-and-forget job. _Skill:_ —
-  · _Accept:_ job runs on schedule; enqueued job executes; `docs/` convention
-  written.
+- [ ] **P4.1** Background jobs (ActiveJob + Sidekiq analog). Microsoft ships no
+  first-party job framework, so: **Hangfire** (recommended — persistent queue +
+  dashboard, closest to the Sidekiq experience) or **Quartz.NET** (if the need is
+  mostly cron scheduling). Store jobs in the app's Postgres DB (no separate
+  infra). Implement one recurring + one fire-and-forget job behind a thin
+  app-owned interface. _Skill:_ — · _Accept:_ scheduled job runs; enqueued job
+  executes; `docs/` convention written.
 - [ ] **P4.2** Email (ActionMailer analog): `MailKit` + Razor-templated bodies;
   dev sink (`smtp4dev` / Papercut / file drop). Wire the P3.3 confirmation email.
   _Skill:_ — · _Accept:_ confirmation email rendered and delivered to the dev
   sink.
-- [ ] **P4.3** Caching + rate limiting: `HybridCache` (in-memory now, Redis-ready),
-  `OutputCache` on suitable endpoints, rate-limiter middleware. _Skill:_ — ·
-  _Accept:_ demonstrated cache hit path; limiter returns 429 under load.
+- [ ] **P4.3** Caching + rate limiting, all first-party: `HybridCache` /
+  `IMemoryCache` (in-memory — no distributed cache yet), `OutputCache` on suitable
+  endpoints, and the built-in `AddRateLimiter` middleware (.NET 7+). A **Redis**
+  `IDistributedCache` backplane is **(vNext)** — add it only when the app runs
+  more than one instance (it then also becomes the SignalR backplane and Data
+  Protection key store). _Skill:_ — · _Accept:_ demonstrated cache hit path;
+  limiter returns 429 under load.
 - [ ] **P4.4** File storage (ActiveStorage analog): `IFileStore` abstraction with
   a local-disk implementation now, blob (Azure/S3) later; ingest via
   `minimal-api-file-upload`. _Skill:_ `minimal-api-file-upload` · _Accept:_ upload
   persists and is retrievable; implementation swappable by config.
-- [ ] **P4.5** Real-time (ActionCable analog, _only if needed_): app-level
-  SignalR hub for notifications / presence, with a typed client. _Skill:_ — ·
-  _Accept:_ two clients receive a pushed event.
-- [ ] **P4.6** Observability: wire OpenTelemetry (traces / metrics / logs) to
-  console or an OTLP collector. _Skill:_ `configuring-opentelemetry-dotnet` ·
-  _Accept:_ a request produces a trace with DB spans.
+- [ ] **P4.5** Real-time (ActionCable analog) — **only if a feature needs it.**
+  App-level SignalR hub for notifications / presence with a typed client; Blazor
+  Interactive Server already runs on SignalR for the UI. _Skill:_ — · _Accept:_
+  two clients receive a pushed event.
+- [ ] **P4.6** Observability — **(vNext, future release).** Near-term need is
+  covered by the built-in `ILogger` (structured logging) plus
+  `Microsoft.Extensions.Diagnostics.HealthChecks` at `/health` (folded into
+  P5.4). Full OpenTelemetry traces / metrics / OTLP export is deferred to a later
+  version. _Skill:_ `configuring-opentelemetry-dotnet` · _Accept (when picked
+  up):_ a request produces a trace with DB spans.
 
 ### P5 — Deployment (Kamal analog — no skill)
 
-- [ ] **P5.1** Multi-stage `Dockerfile` (`dotnet publish`) + `.dockerignore`.
-  _Skill:_ — · _Accept:_ image builds and runs.
-- [ ] **P5.2** Full local stack in one command: `docker-compose` (app + db + redis
-  + smtp sink) **or** an Aspire AppHost if adopted in P1.1. _Skill:_ — ·
-  _Accept:_ one command serves the app with all dependencies.
+Follow the official Microsoft container guidance ("Containerize a .NET app",
+"ASP.NET Core and Docker Compose") — no bespoke setup.
+
+- [ ] **P5.1** Container image, the Microsoft-standard way. Prefer the built-in
+  **.NET SDK container publish** (`dotnet publish -t:PublishContainer`,
+  `mcr.microsoft.com/dotnet/aspnet` base) — no Dockerfile to maintain; fall back
+  to the standard multi-stage `Dockerfile` from the `dotnet` samples only if more
+  control is needed. Add `.dockerignore`. _Skill:_ `dotnet-webapi` /
+  `dotnet-aspnetcore` patterns · _Accept:_ image builds and runs.
+- [ ] **P5.2** Full local stack in one command via a standard `compose.yaml`
+  (app + Postgres + mail sink), per the MS Docker Compose docs. **No Aspire.**
+  Redis is added here only at **(vNext)**. _Skill:_ — · _Accept:_ one command
+  serves the app with its dependencies.
 - [ ] **P5.3** CI/CD pipeline (GitHub Actions): restore → build → test → publish →
-  deploy; pick a target (Azure App Service / Container Apps / Fly.io / self-host).
+  deploy; one target (Azure Container Apps / App Service / Fly.io / self-host).
   _Skill:_ — · _Accept:_ green pipeline deploys to a live environment.
 - [ ] **P5.4** Production hardening: HTTPS, persisted Data Protection keys,
-  secrets via env / key vault, `/health` endpoint. _Skill:_ — · _Accept:_
+  secrets via env / key vault, `/health` + `/alive` health checks
+  (`Microsoft.Extensions.Diagnostics.HealthChecks`). _Skill:_ — · _Accept:_
   `/health` returns 200; auth cookies survive an app restart.
 
 ### P6 — Lower stakes
 
-- [ ] **P6.1** Localization: `IStringLocalizer`, resource files, culture
-  middleware. _Skill:_ — · _Accept:_ one page renders in two cultures.
+- [ ] **P6.1** ~~Localization~~ → **moved to P0.7** (promoted — wanted early,
+  before UI text accumulates).
 - [ ] **P6.2** `rails console` substitute: a DI-wired CLI verb host
   (`dotnet run -- <command>`) or `dotnet-script` with a DI bootstrap. _Skill:_ —
   · _Accept:_ run an ad-hoc query against real services from the terminal.
@@ -292,13 +362,14 @@ test-*data* convention.
 | Seeds | env-gated seeder or CLI verb | ❌ decide + build |
 | Test project | xUnit | ✅ `scaffold-dotnet-test-project` |
 | Test data factories | builder / `Bogus` | ❌ convention |
-| Auth | ASP.NET Core Identity | ✅ `configure-auth` |
-| Background jobs | Hangfire / Quartz / Aspire | ❌ net-new |
-| Email | MailKit + Razor | ❌ net-new |
-| Caching / rate limiting | HybridCache / OutputCache | ❌ net-new |
+| Auth (password) | ASP.NET Core Identity | ✅ `configure-auth` |
+| External OAuth2 login (Google / GitHub / MS) | `Authentication.Google` / `.MicrosoftAccount`; `AspNet.Security.OAuth.GitHub` | ✅ `configure-auth` |
+| Background jobs | Hangfire (Quartz alt) — no MS first-party | ❌ net-new |
+| Email | MailKit + Razor — no MS first-party | ❌ net-new |
+| Caching / rate limiting | `HybridCache` + built-in `AddRateLimiter`; Redis **(vNext)** | ❌ net-new |
 | File storage | `IFileStore` abstraction | ⚠️ `minimal-api-file-upload` (endpoint only) |
-| Real-time | SignalR hub | ❌ net-new |
-| Observability | OpenTelemetry | ✅ `configuring-opentelemetry-dotnet` |
-| Deploy | Docker + CI/CD | ❌ net-new |
-| i18n | `IStringLocalizer` | ❌ net-new |
+| Real-time | SignalR hub — only if a feature needs it | ❌ net-new |
+| Observability | `ILogger` + health checks now; OpenTelemetry **(vNext)** | ✅ `configuring-opentelemetry-dotnet` |
+| Deploy | SDK container publish / `compose.yaml` (MS docs) | ❌ net-new |
+| i18n | `IStringLocalizer` (built-in) | ⚠️ wire it — promoted to P0.7 |
 | `rails console` | DI-wired CLI verbs | ❌ net-new |

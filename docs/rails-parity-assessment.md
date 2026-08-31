@@ -17,7 +17,8 @@ reasons:
 
 ## Project state inspected
 
-- `dotnetskills.csproj` — single project, no `.sln`, no Domain/Infra/Web layering.
+- `dotnetskills.csproj` — single project, no Domain/Infra/Web layering. (A `.slnx`
+  was added afterwards, then de-scoped — see _Scoping decisions_ below.)
 - Blazor Web App, .NET 10, MudBlazor 9.9.0, global Interactive Server render mode.
 - No EF Core package, no `DbContext`, no provider, no connection string, no
   `dotnet ef` tool, no local tool manifest.
@@ -59,11 +60,11 @@ reasons:
 | `db/seeds.rb` | :x: Skill explicitly forbids seeding in `Program.cs`, gives no seed pattern |
 | Test factories (FactoryBot) / fixtures | :x: Strong on test *logic*, nothing on test *data* setup |
 | ActionMailer | :x: No skill, nothing wired |
-| ActiveJob + Sidekiq | :x: No skill (Hangfire / Quartz / hosted service / Aspire) |
+| ActiveJob + Sidekiq | :x: No skill; no MS first-party — Hangfire (recommended) / Quartz.NET |
 | ActionCable | :warning: Blazor rides SignalR internally; no skill for app-level hubs |
 | ActiveStorage (files + variants) | :warning: `minimal-api-file-upload` = ingest endpoint only, no storage abstraction |
 | Fragment / Russian-doll caching | :x: No skill for `OutputCache` / `HybridCache` / response caching |
-| i18n / localization | :x: No skill |
+| i18n / localization | :warning: `IStringLocalizer` is built-in; needs wiring — promoted to plan P0.7 |
 | Environments (dev/test/prod) | :white_check_mark: Native ASP.NET config |
 | Asset pipeline | :white_check_mark: Handled by Blazor static assets + MudBlazor |
 | Deploy (Kamal / Heroku one-liner) | :x: No Dockerfile, no containerize/deploy skill |
@@ -89,8 +90,9 @@ reasons:
 
 ### Batteries with no coverage (each = add a library + write a short skill / convention)
 
-5. **Background jobs** — Hangfire or Quartz.NET, or adopt **.NET Aspire** (which also
-   covers local Postgres / Redis orchestration, closing gap #1's dev-DB story too).
+5. **Background jobs** — Hangfire (recommended) or Quartz.NET. Microsoft ships no
+   first-party job framework. (No .NET Aspire — orchestration tooling aimed at
+   multi-service apps, overkill for a monolith.)
 6. **Email** — MailKit + Razor-templated messages.
 7. **Output / Hybrid caching + rate limiting** conventions.
 8. **App-level SignalR hubs** (if chat / notifications are needed beyond Blazor's
@@ -101,7 +103,7 @@ reasons:
 
 ### Lower stakes
 
-- i18n / localization.
+- ~~i18n / localization~~ — **promoted** to a foundational task (plan P0.7).
 - A `rails console` substitute (`dotnet run -- <verb>` one-off commands, or a C#
   script host).
 - Auth pages actually scaffolded via `configure-auth`.
@@ -112,11 +114,36 @@ The **UI + testing story is excellent** — better than what a Rails dev gets fr
 tooling — and the API / CRUD story is competent and one EF Core setup away from
 usable. The gap to "as productive as Rails" is:
 
-1. **Finish the data layer** (EF Core + provider + `DbContext` + migrations tooling).
-2. Then decide whether to pull in **.NET Aspire** (covers local infra and gives jobs
-   / cache / service wiring a home) versus bolting on Hangfire + MailKit
-   individually.
+1. **Finish the data layer** (EF Core + Postgres provider + `DbContext` +
+   migrations tooling).
+2. Add the batteries as isolated, Microsoft-standard-first pieces: Hangfire
+   (jobs) and MailKit (email) behind thin seams; built-in `HybridCache` +
+   `AddRateLimiter` for caching / throttling; local infra via a plain
+   `compose.yaml`. **No .NET Aspire.**
 
 Neither the framework nor the skills will hand you jobs / mail / cache / deploy the
 way Rails hands you ActiveJob / ActionMailer / Kamal — those stay decisions to make
-and document in `CLAUDE.md`.
+and document in `CLAUDE.md`. See `rails-parity-plan.md` for the sequenced tasks;
+the scoping decisions that shaped it are below.
+
+## Scoping decisions (2026-08-31 review)
+
+- **Monolith-first, Microsoft-standard-first.** Official .NET / ASP.NET Core
+  patterns, templates, and the installed `dotnet*` skills take priority over
+  third-party or bespoke solutions — they are the most robust path and the AI
+  agents are trained on them, so agentic development stays smooth. Third-party
+  only where there is no first-party option (jobs → Hangfire, email → MailKit),
+  kept behind a thin seam. Feature modules / light DDD inside the one project are
+  fine.
+- **Solution file de-scoped** — work against `dotnetskills.csproj` directly until
+  a test project makes a `.slnx` worthwhile (plan P2.1).
+- **Drop .NET Aspire** everywhere it appeared (data, jobs, deploy).
+- **Redis** (distributed cache / SignalR backplane / DP key store) → **vNext**,
+  triggered by running more than one instance.
+- **Full OpenTelemetry** → **vNext**; `ILogger` + health checks cover the
+  near-term need.
+- **External OAuth2 login** (Google / GitHub / Microsoft) added to the auth phase.
+- **Localization promoted** from "lower stakes" to a foundational task (plan
+  P0.7) — cheaper to wire in before UI text accumulates.
+- **Deployment follows official MS container guidance** (SDK container publish or
+  the standard `Dockerfile`, plus `compose.yaml`) — no custom tooling.

@@ -2,8 +2,9 @@
 
 ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 
-> Status: repository initialized; application not yet scaffolded. Sections marked
-> _TBD_ get filled in once `dotnet new blazor` has run and decisions are made.
+> Status: Blazor Web App scaffolded and running on MudBlazor. Being brought to
+> Ruby on Rails-level productivity through a phased plan — see
+> [`docs/rails-parity-plan.md`](docs/rails-parity-plan.md).
 
 ## Stack
 
@@ -13,8 +14,8 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Web | ASP.NET Core, Blazor Web App template |
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
-| Data access | _TBD_ (EF Core expected) |
-| Tests | _TBD_ (xUnit expected) |
+| Data access | EF Core — provider decided in the parity plan (P1.1); not yet wired |
+| Tests | xUnit — test project added in the parity plan (P2.1) |
 
 ## Build / run / test
 
@@ -137,18 +138,57 @@ boundary appears — the folders above map cleanly onto `.Web` / `.Application` 
 Tests live in a separate project under `tests/` (added in P2.1), not in the web
 project.
 
-### Naming, nullable, analyzers (P0.3)
+### Build settings & analyzers
 
-- **`Directory.Build.props`** (solution-wide): `Nullable` + `ImplicitUsings`
-  enable, `LangVersion` latest, `AnalysisMode` Recommended,
-  `TreatWarningsAsErrors` true. Compiler and .NET analyzer (CAxxxx) warnings
-  fail the build. Project `.csproj` files keep only project-specific settings
-  (`TargetFramework`, package references).
+- **`Directory.Build.props`** (repo-wide): `Nullable` + `ImplicitUsings` enable,
+  `LangVersion` latest, `AnalysisMode` Recommended, `TreatWarningsAsErrors`
+  true. Compiler and .NET analyzer (CAxxxx) warnings fail the build. `.csproj`
+  files keep only project-specific settings (`TargetFramework`, package refs).
 - **`.editorconfig`**: CRLF, 4-space C# / 2-space markup, file-scoped
   namespaces, `_camelCase` private fields, full naming rules. Code-style
-  (IDExxxx) rules run in the IDE and `dotnet format`, not the build yet —
-  `EnforceCodeStyleInBuild` stays `false` until the tree is clean (P0.5).
-- Format check: `dotnet format dotnetskills.slnx --verify-no-changes`.
-- _P0.4_ — central package management (`Directory.Packages.props`).
-- _P0.5_ — remaining naming/folder conventions; decide when to flip
-  `EnforceCodeStyleInBuild`.
+  (IDExxxx) rules run in the IDE and `dotnet format`, not the build —
+  `EnforceCodeStyleInBuild` stays `false`; flip it to `true` once
+  `dotnet format --verify-no-changes` runs clean (not a blocker).
+- Format check: `dotnet format --verify-no-changes`.
+- Central package management (`Directory.Packages.props`) is deferred until a
+  second project exists (parity plan P2.1); until then MudBlazor's version is
+  pinned in the `.csproj`.
+
+### Naming & style
+
+- File-scoped namespaces; namespace mirrors the folder
+  (`dotnetskills.Features.Listings`).
+- One public type per file; file name matches the type.
+- `_camelCase` private fields; `PascalCase` types / members / constants;
+  `camelCase` locals & parameters; `I`-prefixed interfaces. Async methods end
+  with `Async` (except Blazor lifecycle overrides and UI event handlers).
+- Nullable reference types are on — model nullability honestly; no
+  `#nullable disable`, no reflexive `!`.
+
+### Folder conventions
+
+- `Components/Pages/` — routable components (`@page`). `Components/Layout/` —
+  layout, `NavMenu`. `Components/Shared/` — reusable non-routable components
+  (create when the first one appears).
+- `Data/` — `AppDbContext`, entities (one per file), `Data/Migrations/`
+  (EF-generated), `Data/Seed/`.
+- `Features/<Feature>/` — feature services, view models, validators; may hold
+  components specific to that feature.
+- `Endpoints/` — minimal-API `Map*` extension methods grouped by resource,
+  called from `Program.cs`. No `Controllers/` unless a real MVC need appears.
+- Repo root holds `Program.cs` only.
+
+### Services, DI, data access
+
+- Register services in `Program.cs`, or a small `Add<Feature>()` extension per
+  feature folder. Anything that touches `DbContext` is `Scoped`.
+- EF Core entities are the model — query `DbContext` with LINQ from feature
+  services or components; no repository layer (Guiding principle 4 in the parity
+  plan). Migration workflow: see the migrations convention doc (parity plan
+  P1.6) once written.
+
+### Blazor
+
+- Global Interactive Server render mode (see the Stack table). Move `@code` into
+  a code-behind `.razor.cs` once it passes ~30 lines; component-local styles go
+  in a collocated `.razor.css`. All UI is MudBlazor — see the rules above.

@@ -189,11 +189,18 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
   the MudBlazor version there. _Skill:_ — · _Accept:_ no versions left in `.csproj`.
   _Note:_ low value while there is one project — fold into **P2.1** (do it when
   the second project appears) unless it is trivially quick now.
-- [ ] **P0.5** Fill in the `CLAUDE.md` "Conventions" section (naming, folder
+- [x] **P0.5** Fill in the `CLAUDE.md` "Conventions" section (naming, folder
   layout, nullable/analyzer policy) and the Build/run/test block with real paths.
   _Skill:_ `init` (assist) · _Accept:_ no `TBD` left in `CLAUDE.md`.
-- [ ] **P0.6** Decide the fate of template pages (`Counter`, `Weather`) — delete
+  _Done:_ stale status blockquote and the Data-access / Tests `_TBD_` rows
+  replaced with parity-plan pointers (P1.1 / P2.1); added Naming & style, Folder
+  conventions, Services / DI / data access, and Blazor sub-sections; fixed the
+  stale `dotnet format dotnetskills.slnx` reference. `grep TBD CLAUDE.md` → none.
+- [x] **P0.6** Decide the fate of template pages (`Counter`, `Weather`) — delete
   or keep as reference. _Skill:_ — · _Accept:_ decision applied.
+  _Done:_ **deleted** `Components/Pages/Counter.razor` + `Weather.razor` and their
+  `NavMenu` links (Rails `new` ships a welcome page, not demo CRUD; real examples
+  arrive at P1.8). Build clean after removal.
 - [ ] **P0.7** Localization foundation (**promoted from P6.1** — wanted early,
   before UI text accumulates). Wire `AddLocalization`, a `Resources/` layout,
   `RequestLocalizationOptions` with the supported cultures, the culture

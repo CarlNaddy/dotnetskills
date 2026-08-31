@@ -14,7 +14,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Web | ASP.NET Core, Blazor Web App template |
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
-| Data access | EF Core — provider decided in the parity plan (P1.1); not yet wired |
+| Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; not yet wired — parity plan P1.2+ |
 | Tests | xUnit — test project added in the parity plan (P2.1) |
 
 ## Build / run / test
@@ -29,6 +29,25 @@ dotnet build
 dotnet watch run   # dev loop
 # dotnet test      # once the test project exists (plan P2.1)
 ```
+
+## Data access
+
+**EF Core 10 + PostgreSQL** (`Npgsql.EntityFrameworkCore.PostgreSQL`), the same
+provider in every environment — no SQLite-in-dev split, so migrations and SQL
+never diverge from production. Decided in parity plan P1.1; wiring starts at P1.2.
+
+- **Local dev:** PostgreSQL runs in Docker via `compose.yaml` (the Microsoft
+  "ASP.NET Core with Docker Compose" pattern); the file is added in P1.2. Bring
+  the DB up with `docker compose up -d db` before `dotnet watch run`.
+- **Connection string:** configuration key `ConnectionStrings:Default`. The dev
+  value lives in user-secrets (`dotnet user-secrets set ...`), never in
+  `appsettings*.json`. Prod supplies it from the environment
+  (`ConnectionStrings__Default`).
+- **DbContext:** `AppDbContext` under `Data/`, registered with
+  `AddDbContext<AppDbContext>(o => o.UseNpgsql(...))` (P1.3).
+- **Migrations:** `dotnet ef` via a local tool manifest (P1.4); the evolution
+  workflow (rollback, renames, backfills) is documented at P1.6. Entities are
+  the model — query `DbContext` directly, no repository layer.
 
 ## Claude Code plugins & skills
 

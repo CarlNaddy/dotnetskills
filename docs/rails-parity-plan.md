@@ -214,13 +214,15 @@ Rails gives layout and conventions for free; `CLAUDE.md` still says `TBD`.
 Nothing in `dotnet-data` can act until a `DbContext` exists. Follow the official
 EF Core provider + migrations workflow throughout.
 
-- [ ] **P1.1** Choose DB provider + local-dev DB story. Recommended:
-  **PostgreSQL + Npgsql** everywhere, with a standard `compose.yaml` running
-  Postgres locally (the Microsoft "ASP.NET Core with Docker Compose" pattern);
-  **SQLite** is the lighter alternative if a zero-infra dev loop matters more
-  than prod parity. **No .NET Aspire** — it is orchestration tooling built for
-  multi-service apps and is overkill for a monolith. _Skill:_ — · _Accept:_
-  decision + connection strategy recorded in `CLAUDE.md`.
+- [x] **P1.1** Choose DB provider + local-dev DB story. **No .NET Aspire** — it is
+  orchestration tooling built for multi-service apps and is overkill for a
+  monolith. _Skill:_ — · _Accept:_ decision + connection strategy recorded in
+  `CLAUDE.md`.
+  _Done:_ **PostgreSQL + Npgsql in every environment** (no SQLite-in-dev split,
+  so migration SQL never diverges from prod). Local Postgres via a standard
+  `compose.yaml` (MS Docker Compose pattern; file created in P1.2). Connection
+  string key `ConnectionStrings:Default` — user-secrets in dev, env var in prod.
+  Recorded in the new `CLAUDE.md` "Data access" section.
 - [ ] **P1.2** Add packages: `Microsoft.EntityFrameworkCore`, the provider
   package, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`).
   _Skill:_ `create-datadriven-aspnetcore` · _Accept:_ `dotnet build` clean.

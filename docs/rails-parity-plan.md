@@ -428,9 +428,8 @@ worked example, not something to copy wholesale.
   (Option A). `docs/new-project.md` checklist + `scripts/new-project.sh`
   (identifier rename, `.csproj` rename, `UserSecretsId` regen, strip
   template-journey docs; leaves the project compiling). `CLAUDE.md` "Reuse"
-  section points at it. _Manual step, cannot be scripted:_ a maintainer ticks
-  repo **Settings → "Template repository"** on GitHub. _Accept:_ a fresh copy
-  runs the script, does the manual follow-up, and builds.
+  section points at it. Repo **Settings → "Template repository"** is enabled
+  (`is_template: true`), so **"Use this template"** is live on GitHub.
 - [ ] **P7.2** Real `dotnet new` custom template — the actual `rails new`
   capability. `.template.config/template.json` with parameters: project name,
   `--sample` (include/exclude the `Listing` feature), `--db` (sqlite|postgres).

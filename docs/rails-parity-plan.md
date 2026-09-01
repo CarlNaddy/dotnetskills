@@ -353,9 +353,24 @@ test-*data* convention.
   `BuildMany` count + override propagation). Convention doc
   [`docs/test-data.md`](test-data.md); `CLAUDE.md` Tests section points at it.
   `dotnet test` → 10/10 (3 pre-existing + 7), clean build with analyzers.
-- [ ] **P2.3** EF Core test approach: SQLite in-memory vs Testcontainers; shared
+- [x] **P2.3** EF Core test approach: SQLite in-memory vs Testcontainers; shared
   fixture / base class. _Skill:_ `code-testing-agent` · _Accept:_ one
   `DbContext`/repository test passing.
+  _Done:_ **Testcontainers + real PostgreSQL** — SQLite / EF in-memory rejected
+  because P1.1 chose one provider for every environment (migration SQL + type
+  mapping must not diverge). `Testcontainers.PostgreSql` 4.6.0 (CPM). Infra in
+  `tests/dotnetskills.Tests/Infrastructure/`: `PostgresFixture` (`postgres:17`
+  container, `MigrateAsync` once, `ResetAsync` = `ExecuteDeleteAsync` per table),
+  `DatabaseCollectionDefinition` (`[CollectionDefinition("database")]` +
+  `ICollectionFixture`), `DatabaseTest` base class (`CreateContext()`, per-test
+  reset via `IAsyncLifetime`, `Ct` = `TestContext.Current.CancellationToken`).
+  `Data/ListingPersistenceTests.cs` — 3 tests: full round-trip (`DateOnly`,
+  `decimal(12,2)`, description), raw-SQL check that `Status` is stored as its
+  string name, and a reset-between-tests guard. `SSH.NET` (transitive via
+  Testcontainers, unused SSH transport, open advisory) handled with a scoped
+  `NuGetAuditSuppress` in the test `.csproj`. Doc:
+  [`docs/testing-database.md`](testing-database.md); `CLAUDE.md` Tests section
+  points at it. `dotnet test` → 13/13 (Docker up), clean build with analyzers.
 - [ ] **P2.4** Blazor component tests with `bUnit`. _Skill:_ `author-component`
   (context) + `code-testing-agent` · _Accept:_ one render + interaction test
   passing.

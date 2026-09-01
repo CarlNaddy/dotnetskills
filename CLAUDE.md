@@ -371,6 +371,15 @@ project.
   / static `Valid()`. Defaults come from `Bogus` with a **fixed seed** so
   unconfigured data is identical every run; pass a seed to the constructor for a
   distinct-but-repeatable set. Conventions: [`docs/test-data.md`](docs/test-data.md).
+- **Database tests (P2.3):** the tier that hits `AppDbContext` runs against **real
+  PostgreSQL in a throwaway `Testcontainers` container** — never SQLite / EF
+  in-memory (parity plan P1.1: one provider everywhere). Infrastructure in
+  `tests/dotnetskills.Tests/Infrastructure/` — `PostgresFixture` (one container
+  per run, migrations applied once, shared via `[Collection("database")]`),
+  `DatabaseTest` base class (`CreateContext()`, per-test table wipe via
+  `ResetAsync`, `Ct` token). `ListingPersistenceTests` is the worked example.
+  **These tests need Docker running.** Details:
+  [`docs/testing-database.md`](docs/testing-database.md).
 
 ## Reuse — starting a new project
 

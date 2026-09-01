@@ -47,12 +47,47 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("ListingsWriter", policy => policy.RequireAuthenticatedUser())
     .AddPolicy("ListingsAdmin", policy => policy.RequireRole("Admin"));
 
-builder.Services.AddAuthentication(options =>
+var authentication = builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-})
-.AddIdentityCookies();
+});
+authentication.AddIdentityCookies();
+
+// P3.4: external OAuth2 providers. Each registers only when its ClientId (and
+// secret) are configured — key shape Authentication:<Provider>:{ClientId,
+// ClientSecret}, from user-secrets in dev / env vars in prod. Callback paths
+// are the handler defaults: /signin-google, /signin-microsoft, /signin-github.
+var googleAuth = builder.Configuration.GetSection("Authentication:Google");
+if (!string.IsNullOrEmpty(googleAuth["ClientId"]))
+{
+    authentication.AddGoogle(options =>
+    {
+        options.ClientId = googleAuth["ClientId"]!;
+        options.ClientSecret = googleAuth["ClientSecret"]!;
+    });
+}
+
+var microsoftAuth = builder.Configuration.GetSection("Authentication:Microsoft");
+if (!string.IsNullOrEmpty(microsoftAuth["ClientId"]))
+{
+    authentication.AddMicrosoftAccount(options =>
+    {
+        options.ClientId = microsoftAuth["ClientId"]!;
+        options.ClientSecret = microsoftAuth["ClientSecret"]!;
+    });
+}
+
+var gitHubAuth = builder.Configuration.GetSection("Authentication:GitHub");
+if (!string.IsNullOrEmpty(gitHubAuth["ClientId"]))
+{
+    authentication.AddGitHub(options =>
+    {
+        options.ClientId = gitHubAuth["ClientId"]!;
+        options.ClientSecret = gitHubAuth["ClientSecret"]!;
+        options.Scope.Add("user:email");
+    });
+}
 
 builder.Services.AddIdentityCore<ApplicationUser>()
     .AddRoles<IdentityRole>()

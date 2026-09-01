@@ -2,6 +2,7 @@
 @attribute [ExcludeFromInteractiveRouting]
 
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -45,11 +46,35 @@
     </MudGrid>
 </EditForm>
 
+@if (_externalLogins.Length > 0)
+{
+    <MudDivider Class="my-4" />
+    <MudText Typo="Typo.body2" Class="mb-2">Or sign in with</MudText>
+    <div class="d-flex flex-wrap">
+        @foreach (var provider in _externalLogins)
+        {
+            <form action="Account/PerformExternalLogin" method="post">
+                <AntiforgeryToken />
+                <input type="hidden" name="provider" value="@provider.Name" />
+                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Class="mr-2 mb-2">
+                    @provider.DisplayName
+                </MudButton>
+            </form>
+        }
+    </div>
+}
+
 <MudText Class="mt-4">
     <MudLink Href="Account/Register">Register as a new user</MudLink>
 </MudText>
 
 @code {
+    private AuthenticationScheme[] _externalLogins = [];
+
+    protected override async Task OnInitializedAsync() =>
+        _externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToArray();
+
     // BL0008: the initializer only backstops a GET request; a POST always
     // supplies every bound field before OnValidSubmit runs.
 #pragma warning disable BL0008

@@ -421,12 +421,31 @@ test-*data* convention.
   username/email → logout cleared the session → `/Account/Manage` redirected
   anonymous to `/Account/Login?ReturnUrl=...` → logging back in restored access.
   Clean build, `dotnet test` 3/3 passed throughout.
-- [ ] **P3.4** External login providers (OAuth2): **Google** and **Microsoft** via
+- [x] **P3.4** External login providers (OAuth2): **Google** and **Microsoft** via
   the first-party `Microsoft.AspNetCore.Authentication.Google` /
   `.MicrosoftAccount` handlers; **GitHub** via `AspNet.Security.OAuth.GitHub`
   (community handler — Microsoft ships none). Wire into Identity external logins;
   provider secrets via user-secrets in dev. _Skill:_ `configure-auth` · _Accept:_
   signing in with Google (and one more) creates / links an Identity user.
+  _Done:_ 3 packages added (Google/Microsoft `10.0.11`, `AspNet.Security.OAuth.GitHub`
+  `10.0.0`). `Program.cs` registers each handler **only when configured** —
+  `Authentication:<Provider>:{ClientId,ClientSecret}` from user-secrets / env
+  vars. `Endpoints/AccountEndpoints.cs` gains `POST /Account/PerformExternalLogin`
+  (issues the `Challenge`); `Components/Account/Pages/ExternalLogin.razor` is the
+  `/signin-<provider>` landing page — signs in if the login is linked, else
+  **auto-provisions** a local user from the provider's verified email claim and
+  links it (no email-confirmation step; trusts Google/Microsoft verification and
+  GitHub's `user:email` scope). `Login.razor` renders one `<form>` per configured
+  provider.
+  **Verified** (build + curl, dummy creds): clean build, `dotnet test` 3/3.
+  With all three configured, `/Account/Login` shows Google / Microsoft / GitHub
+  buttons; `POST /Account/PerformExternalLogin` → **302** to the correct
+  authorize URL for each (`accounts.google.com/o/oauth2/v2/auth?...redirect_uri=
+  .../signin-google`, `login.microsoftonline.com/...`, `github.com/login/oauth/
+  authorize?scope=user:email...`). `/Account/ExternalLogin` with no pending auth
+  renders its error state cleanly. _Not verified:_ the full OAuth round-trip
+  (callback → provision/link/sign-in) needs real registered OAuth apps +
+  secrets — the challenge wiring and the standard callback logic are in place.
 - [x] **P3.5** Authorization: policies / roles, `[Authorize]` on a protected page,
   `AuthorizeView` in the nav. _Skill:_ `configure-auth` · _Accept:_ anonymous hit
   on a protected route redirects to login.

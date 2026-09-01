@@ -17,19 +17,21 @@ installed at all) is closed: EF Core 10 + PostgreSQL, `dotnet ef`, a migrations
 convention doc, and a `dotnet run -- seed` verb are wired and verified end-to-end
 against a real entity.
 
-**Full-app parity is roughly half done.** What remains is the larger half by
-volume and the part where Rails' "it's already there" advantage is structural:
+**Auth (P3) is now complete** — Identity, a user model, register/login/logout/
+manage pages, role/policy authorization on the `Listing` feature, a `dotnet run
+-- seed` dev admin, and external OAuth2 (Google / Microsoft / GitHub) are all
+wired. Password, authorization, and seed flows are verified end-to-end against
+Postgres; the OAuth challenge redirects are verified, the full provider
+round-trip awaits real credentials.
 
-1. **Auth is functional but not finished** (P3) — Identity, a user model,
-   working register/login/logout/manage pages, and role/policy authorization on
-   the `Listing` feature all exist and are verified end-to-end against Postgres
-   (P3.1–P3.3, P3.5–P3.6, incl. a `dotnet run -- seed` dev admin user). External
-   OAuth2 (P3.4) is the only piece still open.
-2. **The batteries tier has no library and no skill** (P4) — background jobs,
+**Full-app parity is a bit past half.** What remains is the part where Rails'
+"it's already there" advantage is structural:
+
+1. **The batteries tier has no library and no skill** (P4) — background jobs,
    mailers, caching/rate-limiting, file storage, real-time. Each is a
    decide-a-library + wire-a-seam + write-a-convention exercise. Rails hands these
    over; here they stay decisions to make and document.
-3. **No deployment story** (P5) — local DB comes up with one command, but there is
+2. **No deployment story** (P5) — local DB comes up with one command, but there is
    no app container, no full-stack `compose.yaml`, and no CI/CD pipeline.
 
 On **testing** and **type safety** the setup is **ahead of Rails** and was already
@@ -42,7 +44,7 @@ ahead at baseline.
 | **P0** Foundations & conventions | all open | ✅ **complete** — `Directory.Build.props` (nullable, analyzers, warnings-as-errors), `.editorconfig`, central package management, `CLAUDE.md` conventions filled in, template demo pages removed, localization foundation (`en`/`de`) wired |
 | **P1** Data layer (EF Core) | nothing installed | ✅ **complete** — Npgsql EF Core 10, `AppDbContext` via `AddDbContextFactory`, `dotnet-ef` local tool, `InitialCreate` + real-entity migrations applied, [`docs/ef-migrations.md`](./ef-migrations.md) conventions with a worked column-rename, `dotnet run -- seed` (idempotent, migrates first), full `Listing` CRUD in MudBlazor verified against Postgres |
 | **P2** Testing | no project | 🟡 **P2.1 done** — `tests/dotnetskills.Tests/` (xUnit v3 on MTP, `OutputType=Exe`, no `Microsoft.NET.Test.Sdk`), discovered by `dotnet test`. P2.2–P2.5 open |
-| **P3** Auth | open | 🟡 **P3.1–P3.3, P3.5–P3.6 done** — Identity + EF stores + `AddIdentity` migration; Register/Login/Logout/Manage pages **verified end-to-end against Postgres**. `Listing` feature authorization: public read, `ListingsWriter` policy on create/edit pages, `ListingsAdmin` (role) on delete, `AuthorizeView` in nav + list — anon hits on write routes 302 to login. `dotnet run -- seed` seeds the `Admin` role + a dev admin user (`admin@dotnetskills.local`, config-overridable, password required outside Development). Surfaced a real MudBlazor constraint: its inputs can't post through static-SSR forms — fixed with native `InputText`/`InputCheckbox`, recorded as the one exception to "all UI is MudBlazor". **External OAuth2 (P3.4) is all that's left in P3.** |
+| **P3** Auth | open | ✅ **complete** — Identity + EF stores + `AddIdentity` migration; Register/Login/Logout/Manage pages **verified end-to-end against Postgres**. `Listing` authorization: public read, `ListingsWriter` policy on create/edit pages, `ListingsAdmin` (role) on delete, `AuthorizeView` in nav + list. `dotnet run -- seed` provisions the `Admin` role + a dev admin. External OAuth2 (Google / Microsoft / GitHub) registers per-provider when configured; challenge redirects verified, `ExternalLogin.razor` auto-provisions a local user from the verified email. Surfaced a real MudBlazor constraint: its inputs can't post through static-SSR forms — fixed with native `InputText`/`InputCheckbox`, the one exception to "all UI is MudBlazor". |
 | **P4** Batteries | open | ❌ open |
 | **P5** Deployment | open | 🟡 local Postgres via `compose.yaml`; app image / full stack / CI-CD open |
 | **P7** Packaging & reuse | open | ✅ **done at P7.1** — GitHub template repo + `scripts/new-project.sh` (skeleton by default, `--with-sample` keeps the `Listing` feature) + `scripts/update-from-template.sh` (forward-sync for spun-off projects), all verified on fresh clones. **P7.2 (`dotnet new` template) deferred to (vNext)** — the scripts already produce a building project; the gap is ergonomics + distribution, not capability, and a `dotnet new` project loses the forward-sync path |
@@ -79,8 +81,10 @@ ahead at baseline.
   `AppDbContext`; Register/Login/Logout/Manage pages under `Components/Account/`;
   `ListingsWriter` / `ListingsAdmin` policies gating the `Listing` write pages,
   buttons, and delete action; `dotnet run -- seed` seeds the `Admin` role + a
-  dev admin user. Verified end-to-end against Postgres (P3.1–P3.3, P3.5–P3.6).
-  No external OAuth2 (P3.4).
+  dev admin user; external OAuth2 (Google / Microsoft / GitHub) via
+  `Account/PerformExternalLogin` + `ExternalLogin.razor`, per-provider,
+  config-gated. Verified end-to-end against Postgres (P3.1–P3.6); OAuth
+  round-trip needs real provider credentials.
 - No background jobs, mail, cache abstraction, file storage, or app-level
   SignalR. No app Dockerfile / container publish, no CI/CD.
 - `CLAUDE.md` — conventions, data-access, MudBlazor rules, localization, and
@@ -126,7 +130,7 @@ or schema evolution beyond "add + update" (the repo's own
 | Asset pipeline | :white_check_mark: Blazor static assets + MudBlazor |
 | i18n / localization | :white_check_mark: `IStringLocalizer` wired (`en`/`de`), cookie-persisted culture selector (P0.7) |
 | Test framework | :white_check_mark::white_check_mark: **exceeds Rails** — coverage, mutation-gap, CRAP, anti-pattern / smell audits, testability refactors, per-test grading |
-| Auth (Devise) | :white_check_mark: Identity wired, EF stores, Register/Login/Logout/Manage pages verified end-to-end; `dotnet run -- seed` provisions a dev admin (P3.1–P3.3, P3.6). External OAuth2 (P3.4) still open |
+| Auth (Devise) | :white_check_mark: Identity wired, EF stores, Register/Login/Logout/Manage pages verified end-to-end; `dotnet run -- seed` provisions a dev admin; external OAuth2 (Google/Microsoft/GitHub) config-gated, challenge redirects verified (P3.1–P3.6) |
 | Authorization (Pundit) | :white_check_mark: `ListingsWriter` / `ListingsAdmin` policies on the `Listing` feature — `[Authorize(Policy)]` on pages, `AuthorizeView` on buttons + nav, code-level role re-check on delete (P3.5) |
 | Test factories (FactoryBot) / fixtures | :x: strong on test *logic*, nothing on test *data* — no builders, no `Bogus` (P2.2) |
 | EF Core test approach | :x: no shared `DbContext` fixture, no Testcontainers / in-memory decision (P2.3) |
@@ -148,7 +152,7 @@ or schema evolution beyond "add + update" (the repo's own
 | 1 | Model + reversible migrations | ✅ at parity |
 | 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
 | 3 | One-command seed on fresh clone | ✅ at parity |
-| 4 | Authenticate & authorize users | 🟡 register/login/logout/manage, role/policy authorization on the `Listing` feature, and a seeded dev admin all work end-to-end (P3.1–P3.3, P3.5–P3.6); external OAuth2 (P3.4) open |
+| 4 | Authenticate & authorize users | ✅ register/login/logout/manage, `Listing` role/policy authorization, seeded dev admin, and config-gated OAuth2 (Google/Microsoft/GitHub) all wired (P3.1–P3.6); OAuth provider round-trip needs real credentials |
 | 5 | Jobs / email / cache / file storage / real-time | ❌ not started (P4) |
 | 6 | Model + integration + component tests, reusable test data | 🟡 test project runs; builders / EF fixture / bUnit / coverage baseline open |
 | 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
@@ -164,14 +168,15 @@ or schema evolution beyond "add + update" (the repo's own
 - `bUnit` for component render + interaction tests.
 - Coverage baseline + Cobertura report in CI.
 
-### Finish auth (P3.4) — the rest is done
+### Auth (P3) — done
 
-Identity + EF stores + migration + register/login/logout/manage pages +
-role/policy authorization on the `Listing` feature + a `dotnet run -- seed` dev
-admin are all done and verified (P3.1–P3.3, P3.5–P3.6). The only piece left is
-**external OAuth2** (Google / Microsoft first-party, GitHub via
-`AspNet.Security.OAuth.GitHub`). The `configure-auth` skill covers the design;
-this is a focused build-out.
+Identity + EF stores + migration, register/login/logout/manage pages,
+role/policy authorization on the `Listing` feature, a `dotnet run -- seed` dev
+admin, and external OAuth2 (Google / Microsoft first-party, GitHub via
+`AspNet.Security.OAuth.GitHub`) are all wired (P3.1–P3.6). Only remaining task
+is operational, not code: register real OAuth apps with each provider and drop
+their `Authentication:<Provider>:*` secrets into user-secrets to exercise the
+full sign-in round-trip.
 
 ### Batteries (P4) — the structural gap, net-new, document as you go
 
@@ -215,8 +220,8 @@ productivity and ahead of it on testing and type safety. **Starting a new projec
 from the baseline is settled** — the P7.1 script route is the accepted answer;
 a one-command `dotnet new` template stays deferred until org-wide sharing makes
 it worth the maintenance. The distance to **"clone it and ship a real product"**
-is auth's OAuth2 tail (P3.4) plus P4–P5: the batteries tier (net-new, five
-libraries behind seams) and a deploy pipeline (standard, unskilled). Roughly
+is P4–P5: the batteries tier (net-new, five libraries behind seams) and a
+deploy pipeline (standard, unskilled). Roughly
 **half the plan by volume remains**, and the batteries half is the part where the
 goal is parity of *documentation and convention* with Rails — not the effortless
 "it's already wired" that Rails and its AI tooling will always have there.

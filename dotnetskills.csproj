@@ -20,6 +20,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- External OAuth2 login (parity plan P3.4). Google + Microsoft are
+         first-party; GitHub has no MS handler so it uses the aspnet-contrib one.
+         Each registers only when its ClientId/ClientSecret are configured. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
+    <PackageReference Include="AspNet.Security.OAuth.GitHub" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- EF Core 10 + PostgreSQL — see CLAUDE.md "Data access". Npgsql brings
          Microsoft.EntityFrameworkCore(.Relational) transitively. Design is
          build-only (dotnet ef / migrations). Versions: Directory.Packages.props. -->

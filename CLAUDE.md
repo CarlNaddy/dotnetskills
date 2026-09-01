@@ -15,7 +15,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
 | Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
-| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages, `Listing` policy/role authorization, dev admin seed done (parity plan P3.1–P3.3, P3.5–P3.6); external OAuth2 (P3.4) next |
+| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages, `Listing` policy/role authorization, dev admin seed, external OAuth2 (Google/Microsoft/GitHub) all done (parity plan P3.1–P3.6) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -64,7 +64,7 @@ username/password model (the Devise analog), cookie authentication, roles
 enabled. Decided in parity plan **P3.1**; Identity + stores + the `AddIdentity`
 migration wired in **P3.2**; Register/Login/Logout/Manage pages in **P3.3**;
 policy/role authorization on the `Listing` feature in **P3.5**; dev admin seed
-in **P3.6**.
+in **P3.6**; external OAuth2 (Google / Microsoft / GitHub) in **P3.4**.
 Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
 
 - **User entity:** `ApplicationUser : IdentityUser` under `Data/` (one type per
@@ -133,11 +133,25 @@ Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
   so Register/Login don't repeat the open-redirect guard.
 - **External login (P3.4):** Google and Microsoft via the first-party
   `Microsoft.AspNetCore.Authentication.Google` / `.MicrosoftAccount` handlers;
-  GitHub via `AspNet.Security.OAuth.GitHub` (Microsoft ships no handler).
-  Provider secrets go in user-secrets in dev, environment variables in prod —
-  never `appsettings*.json`.
+  GitHub via `AspNet.Security.OAuth.GitHub` (Microsoft ships no handler). Each
+  provider registers in `Program.cs` **only when configured** — keys
+  `Authentication:Google:{ClientId,ClientSecret}` (same shape for `Microsoft`
+  and `GitHub`), from user-secrets in dev / env vars in prod, never
+  `appsettings*.json`. Callback paths are the handler defaults —
+  `/signin-google`, `/signin-microsoft`, `/signin-github` — register these as
+  the redirect URIs with each provider.
+  - Flow: `Login.razor` renders one `<form>` per configured provider →
+    `POST /Account/PerformExternalLogin` (`Endpoints/AccountEndpoints.cs`)
+    issues the `Challenge` → provider → `/signin-<provider>` middleware →
+    `Components/Account/Pages/ExternalLogin.razor`.
+  - `ExternalLogin.razor` signs in if the login is already linked; otherwise it
+    **auto-provisions** a local `ApplicationUser` from the provider's verified
+    email claim and links it (`EmailConfirmed = true`). This trusts the
+    provider's email verification (Google/Microsoft always; GitHub via the
+    `user:email` scope). No email-confirmation step — the Rails "sign in with
+    Google just works" behaviour.
 - **Seeding:** a known dev admin user + the `Admin` role are seeded by
-  `Data/Seed/DbSeeder.cs` (P3.6), idempotent like the rest of the seed.
+  `Data/Seed/IdentitySeeder.cs` (P3.6), idempotent like the rest of the seed.
 
 ## Claude Code plugins & skills
 

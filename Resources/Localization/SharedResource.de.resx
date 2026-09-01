@@ -18,6 +18,9 @@
   <data name="Nav_Listings" xml:space="preserve">
     <value>Angebote</value>
   </data>
+  <data name="Nav_Account" xml:space="preserve">
+    <value>Konto</value>
+  </data>
   <data name="Home_Title" xml:space="preserve">
     <value>Hallo, Welt!</value>
   </data>

@@ -15,7 +15,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
 | Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
-| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; external OAuth2 layered on later — Identity + stores + migration wired (parity plan P3.2); login/register pages next (P3.3) |
+| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages + `Listing` policy/role authorization done (parity plan P3.1–P3.3, P3.5); external OAuth2 (P3.4) + admin seed (P3.6) next |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -59,7 +59,8 @@ never diverge from production. Decided in parity plan P1.1; wiring starts at P1.
 **ASP.NET Core Identity** with EF Core stores — the self-contained
 username/password model (the Devise analog), cookie authentication, roles
 enabled. Decided in parity plan **P3.1**; Identity + stores + the `AddIdentity`
-migration wired in **P3.2**; Register/Login/Logout/Manage pages in **P3.3**.
+migration wired in **P3.2**; Register/Login/Logout/Manage pages in **P3.3**;
+policy/role authorization on the `Listing` feature in **P3.5**.
 Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
 
 - **User entity:** `ApplicationUser : IdentityUser` under `Data/` (one type per
@@ -77,8 +78,15 @@ Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
   .GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext())` so
   both share one configuration.
 - **Roles & policies:** `AddRoles<IdentityRole>()` + `AddDefaultTokenProviders()`.
-  Use a named policy when a rule is more than a role check; `[Authorize(Roles =
-  "…")]` otherwise.
+  Named policies are registered in `Program.cs` via `AddAuthorizationBuilder()`.
+  The `Listing` feature is the worked pattern (P3.5): **public to read, gated to
+  write** — `ListingsWriter` (`RequireAuthenticatedUser`) on the create/edit
+  pages, `ListingsAdmin` (`RequireRole("Admin")`) on delete. `[Authorize(Policy
+  = "…")]` protects the *page*; `<AuthorizeView Policy="…">` hides the *button*;
+  a delete handler also re-checks the role in code
+  (`Components/AuthStateExtensions.cs` → `AuthState.IsInRoleAsync("Admin")`) —
+  the button being hidden is not a security boundary. The `Admin` role is
+  seeded in P3.6.
 - **Identity UI:** hand-authored Razor pages under `Components/Account/`
   (`Pages/Register.razor`, `Pages/Login.razor`, `Pages/Manage/Index.razor`).
   The stock Identity UI Razor Class Library ships Bootstrap markup and is

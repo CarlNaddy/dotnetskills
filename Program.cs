@@ -36,10 +36,16 @@ builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(
 builder.Services.AddScoped<AppDbContext>(sp =>
     sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
 
-// Authentication & authorization (parity plan P3.2) — Identity with EF Core
-// stores in AppDbContext. Login/register/manage pages land in P3.3.
+// Authentication & authorization (parity plan P3.2–P3.5) — Identity with EF Core
+// stores in AppDbContext.
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddAuthorization();
+
+// P3.5: Listings are public to read, gated to write. "ListingsWriter" = any
+// signed-in user (create / edit); "ListingsAdmin" = the Admin role (delete).
+// An Admin user is seeded in P3.6.
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("ListingsWriter", policy => policy.RequireAuthenticatedUser())
+    .AddPolicy("ListingsAdmin", policy => policy.RequireRole("Admin"));
 
 builder.Services.AddAuthentication(options =>
 {

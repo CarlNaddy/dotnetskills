@@ -20,10 +20,11 @@ against a real entity.
 **Full-app parity is roughly half done.** What remains is the larger half by
 volume and the part where Rails' "it's already there" advantage is structural:
 
-1. **Auth is functional but not finished** (P3) — Identity, a user model, and
-   working register/login/logout/manage pages exist and are verified end-to-end
-   against Postgres. Roles applied to a real protected feature, external OAuth2,
-   and an admin seed (P3.4–P3.6) are still open.
+1. **Auth is functional but not finished** (P3) — Identity, a user model,
+   working register/login/logout/manage pages, and role/policy authorization on
+   the `Listing` feature all exist and are verified end-to-end against Postgres
+   (P3.1–P3.3, P3.5). External OAuth2 (P3.4) and the `Admin`-role seed (P3.6)
+   are still open.
 2. **The batteries tier has no library and no skill** (P4) — background jobs,
    mailers, caching/rate-limiting, file storage, real-time. Each is a
    decide-a-library + wire-a-seam + write-a-convention exercise. Rails hands these
@@ -41,7 +42,7 @@ ahead at baseline.
 | **P0** Foundations & conventions | all open | ✅ **complete** — `Directory.Build.props` (nullable, analyzers, warnings-as-errors), `.editorconfig`, central package management, `CLAUDE.md` conventions filled in, template demo pages removed, localization foundation (`en`/`de`) wired |
 | **P1** Data layer (EF Core) | nothing installed | ✅ **complete** — Npgsql EF Core 10, `AppDbContext` via `AddDbContextFactory`, `dotnet-ef` local tool, `InitialCreate` + real-entity migrations applied, [`docs/ef-migrations.md`](./ef-migrations.md) conventions with a worked column-rename, `dotnet run -- seed` (idempotent, migrates first), full `Listing` CRUD in MudBlazor verified against Postgres |
 | **P2** Testing | no project | 🟡 **P2.1 done** — `tests/dotnetskills.Tests/` (xUnit v3 on MTP, `OutputType=Exe`, no `Microsoft.NET.Test.Sdk`), discovered by `dotnet test`. P2.2–P2.5 open |
-| **P3** Auth | open | 🟡 **P3.1–P3.3 done** — model recorded; Identity + EF stores wired, `AddIdentity` migration applied; Register/Login/Logout/Manage pages built and **verified end-to-end against Postgres** (register → cookie set → DB row → manage → logout → protected-page redirect → re-login). Surfaced a real MudBlazor constraint: its inputs can't post through static-SSR forms — fixed with native `InputText`/`InputCheckbox`, recorded as the one exception to "all UI is MudBlazor". OAuth2 (P3.4), roles/`[Authorize]` on a real feature (P3.5), admin seed (P3.6) open |
+| **P3** Auth | open | 🟡 **P3.1–P3.3 + P3.5 done** — model recorded; Identity + EF stores wired, `AddIdentity` migration applied; Register/Login/Logout/Manage pages built and **verified end-to-end against Postgres**. Authorization applied to the `Listing` feature: public read, `ListingsWriter` policy gates create/edit pages, `ListingsAdmin` (role) gates delete, `AuthorizeView` in nav + list — anon hits on write routes 302 to login, verified. Surfaced a real MudBlazor constraint: its inputs can't post through static-SSR forms — fixed with native `InputText`/`InputCheckbox`, recorded as the one exception to "all UI is MudBlazor". OAuth2 (P3.4) and the `Admin`-role seed (P3.6) open |
 | **P4** Batteries | open | ❌ open |
 | **P5** Deployment | open | 🟡 local Postgres via `compose.yaml`; app image / full stack / CI-CD open |
 | **P7** Packaging & reuse | open | ✅ **done at P7.1** — GitHub template repo + `scripts/new-project.sh` (skeleton by default, `--with-sample` keeps the `Listing` feature) + `scripts/update-from-template.sh` (forward-sync for spun-off projects), all verified on fresh clones. **P7.2 (`dotnet new` template) deferred to (vNext)** — the scripts already produce a building project; the gap is ergonomics + distribution, not capability, and a `dotnet new` project loses the forward-sync path |
@@ -74,9 +75,10 @@ ahead at baseline.
   `de`), `IStringLocalizer<SharedResource>`, `CultureSelector` in the app bar →
   `GET /culture/set` cookie + `LocalRedirect`. Nav + `Home` localized.
 - **Auth** — ASP.NET Core Identity, `ApplicationUser`, Identity tables in
-  `AppDbContext`; Register/Login/Logout/Manage pages under `Components/Account/`
-  verified end-to-end against Postgres (P3.1–P3.3). No roles enforced on a real
-  feature yet, no external OAuth2, no admin seed (P3.4–P3.6).
+  `AppDbContext`; Register/Login/Logout/Manage pages under `Components/Account/`;
+  `ListingsWriter` / `ListingsAdmin` policies gating the `Listing` write pages,
+  buttons, and delete action. Verified end-to-end against Postgres (P3.1–P3.3,
+  P3.5). No external OAuth2 (P3.4), no `Admin`-role seed (P3.6).
 - No background jobs, mail, cache abstraction, file storage, or app-level
   SignalR. No app Dockerfile / container publish, no CI/CD.
 - `CLAUDE.md` — conventions, data-access, MudBlazor rules, localization, and
@@ -122,8 +124,8 @@ or schema evolution beyond "add + update" (the repo's own
 | Asset pipeline | :white_check_mark: Blazor static assets + MudBlazor |
 | i18n / localization | :white_check_mark: `IStringLocalizer` wired (`en`/`de`), cookie-persisted culture selector (P0.7) |
 | Test framework | :white_check_mark::white_check_mark: **exceeds Rails** — coverage, mutation-gap, CRAP, anti-pattern / smell audits, testability refactors, per-test grading |
-| Auth (Devise) | :white_check_mark: Identity wired, EF stores, Register/Login/Logout/Manage pages verified end-to-end (P3.1–P3.3). Roles/policies on a real page, OAuth2, admin seed still open (P3.4–P3.6) |
-| Authorization (Pundit) | :x: covered conceptually by `configure-auth`; nothing wired |
+| Auth (Devise) | :white_check_mark: Identity wired, EF stores, Register/Login/Logout/Manage pages verified end-to-end (P3.1–P3.3). OAuth2 (P3.4), admin seed (P3.6) still open |
+| Authorization (Pundit) | :white_check_mark: `ListingsWriter` / `ListingsAdmin` policies on the `Listing` feature — `[Authorize(Policy)]` on pages, `AuthorizeView` on buttons + nav, code-level role re-check on delete (P3.5) |
 | Test factories (FactoryBot) / fixtures | :x: strong on test *logic*, nothing on test *data* — no builders, no `Bogus` (P2.2) |
 | EF Core test approach | :x: no shared `DbContext` fixture, no Testcontainers / in-memory decision (P2.3) |
 | Component tests | :x: no `bUnit` (P2.4) |
@@ -144,7 +146,7 @@ or schema evolution beyond "add + update" (the repo's own
 | 1 | Model + reversible migrations | ✅ at parity |
 | 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
 | 3 | One-command seed on fresh clone | ✅ at parity |
-| 4 | Authenticate & authorize users | 🟡 register/login/logout/manage work end-to-end (P3.1–P3.3); OAuth2 + role-gated feature + admin seed open (P3.4–P3.6) |
+| 4 | Authenticate & authorize users | 🟡 register/login/logout/manage + role/policy authorization on the `Listing` feature work end-to-end (P3.1–P3.3, P3.5); OAuth2 (P3.4) + admin seed (P3.6) open |
 | 5 | Jobs / email / cache / file storage / real-time | ❌ not started (P4) |
 | 6 | Model + integration + component tests, reusable test data | 🟡 test project runs; builders / EF fixture / bUnit / coverage baseline open |
 | 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
@@ -160,14 +162,14 @@ or schema evolution beyond "add + update" (the repo's own
 - `bUnit` for component render + interaction tests.
 - Coverage baseline + Cobertura report in CI.
 
-### Finish auth (P3.4–P3.6) — the core is done
+### Finish auth (P3.4, P3.6) — the core is done
 
-Identity + EF stores + migration + register/login/logout/manage pages are done
-and verified (P3.1–P3.3). Remaining: external OAuth2 (Google / Microsoft
-first-party, GitHub via `AspNet.Security.OAuth.GitHub`); policies / roles
-enforced on an actual protected feature, not just the render-mode plumbing;
-seed an admin user in `DbSeeder`. The `configure-auth` skill covers the design;
-this is a focused build-out.
+Identity + EF stores + migration + register/login/logout/manage pages +
+role/policy authorization on the `Listing` feature are done and verified
+(P3.1–P3.3, P3.5). Remaining: external OAuth2 (Google / Microsoft first-party,
+GitHub via `AspNet.Security.OAuth.GitHub`); seed the `Admin` role + a dev admin
+user in `DbSeeder`. The `configure-auth` skill covers the design; this is a
+focused build-out.
 
 ### Batteries (P4) — the structural gap, net-new, document as you go
 
@@ -211,7 +213,7 @@ productivity and ahead of it on testing and type safety. **Starting a new projec
 from the baseline is settled** — the P7.1 script route is the accepted answer;
 a one-command `dotnet new` template stays deferred until org-wide sharing makes
 it worth the maintenance. The distance to **"clone it and ship a real product"**
-is the rest of P3 plus P4–P5: auth's roles/OAuth2/admin-seed tail (P3.4–P3.6),
+is the rest of P3 plus P4–P5: auth's OAuth2 + admin-seed tail (P3.4, P3.6),
 the batteries tier (net-new, five libraries behind seams), and a deploy pipeline
 (standard, unskilled). Roughly
 **half the plan by volume remains**, and the batteries half is the part where the

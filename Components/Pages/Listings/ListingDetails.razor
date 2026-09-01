@@ -24,10 +24,14 @@ else
         <MudText Typo="Typo.h4">@_listing.Title</MudText>
         <MudChip T="string" Size="Size.Small" Color="StatusColor(_listing.Status)">@_listing.Status</MudChip>
         <MudSpacer />
-        <MudButton Href="@($"/listings/{Id}/edit")" StartIcon="@Icons.Material.Filled.Edit"
-                   Variant="Variant.Filled" Color="Color.Primary">Edit</MudButton>
-        <MudButton OnClick="DeleteAsync" StartIcon="@Icons.Material.Filled.Delete"
-                   Variant="Variant.Outlined" Color="Color.Error">Delete</MudButton>
+        <AuthorizeView Policy="ListingsWriter">
+            <MudButton Href="@($"/listings/{Id}/edit")" StartIcon="@Icons.Material.Filled.Edit"
+                       Variant="Variant.Filled" Color="Color.Primary">Edit</MudButton>
+        </AuthorizeView>
+        <AuthorizeView Policy="ListingsAdmin">
+            <MudButton OnClick="DeleteAsync" StartIcon="@Icons.Material.Filled.Delete"
+                       Variant="Variant.Outlined" Color="Color.Error">Delete</MudButton>
+        </AuthorizeView>
     </div>
 
     <MudPaper Class="pa-4" Elevation="1">
@@ -51,6 +55,9 @@ else
 @code {
     [Parameter] public int Id { get; set; }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     private Listing? _listing;
     private bool _loaded;
 
@@ -71,6 +78,12 @@ else
 
     private async Task DeleteAsync()
     {
+        if (!await AuthState.IsInRoleAsync("Admin"))
+        {
+            Snackbar.Add("You do not have permission to delete listings.", Severity.Error);
+            return;
+        }
+
         var parameters = new DialogParameters<DeleteListingDialog> { { x => x.Title, _listing!.Title } };
         var dialog = await DialogService.ShowAsync<DeleteListingDialog>("Delete listing", parameters);
         var result = await dialog.Result;

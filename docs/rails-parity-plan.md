@@ -427,9 +427,28 @@ test-*data* convention.
   (community handler — Microsoft ships none). Wire into Identity external logins;
   provider secrets via user-secrets in dev. _Skill:_ `configure-auth` · _Accept:_
   signing in with Google (and one more) creates / links an Identity user.
-- [ ] **P3.5** Authorization: policies / roles, `[Authorize]` on a protected page,
+- [x] **P3.5** Authorization: policies / roles, `[Authorize]` on a protected page,
   `AuthorizeView` in the nav. _Skill:_ `configure-auth` · _Accept:_ anonymous hit
   on a protected route redirects to login.
+  _Done:_ applied to the `Listing` feature as the real protected surface —
+  **public to read, gated to write**. `Program.cs` `AddAuthorizationBuilder()`
+  with two policies: `ListingsWriter` (`RequireAuthenticatedUser`) and
+  `ListingsAdmin` (`RequireRole("Admin")`). `ListingCreate` / `ListingEdit`
+  pages carry `@attribute [Authorize(Policy = "ListingsWriter")]`;
+  `ListingDetails` and `Listings` wrap their Edit buttons in
+  `<AuthorizeView Policy="ListingsWriter">` and Delete in
+  `<AuthorizeView Policy="ListingsAdmin">`; both `DeleteAsync` handlers also
+  re-check the role in code (`AuthStateExtensions.IsInRoleAsync`,
+  `Components/AuthStateExtensions.cs`) — defence in depth behind the hidden
+  button. `NavMenu` gains an authenticated-only **Account** link via
+  `<AuthorizeView>` (`Nav_Account` resx key, en/de). The `Admin` role itself is
+  seeded in P3.6.
+  **Verified end-to-end against Postgres** (curl): anonymous `/listings` → 200,
+  but `/listings/new` and `/listings/1/edit` → 302 to
+  `/Account/Login?ReturnUrl=…` (the acceptance criterion); the list's prerender
+  HTML carries 0 write controls. Registered a plain user → "New listing" + 5
+  Edit icons appear, 0 Delete icons. Granted that user the `Admin` role +
+  re-login → 5 Delete icons appear. Clean build, `dotnet test` 3/3.
 - [ ] **P3.6** Seed an admin user in the P1.7 seeder. _Skill:_ — · _Accept:_ known
   dev admin credentials.
 

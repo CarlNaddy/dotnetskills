@@ -13,8 +13,10 @@
                   Variant="Variant.Outlined" Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Small"
                   Immediate="true" Clearable="true" Class="flex-grow-1" Style="max-width:320px" />
-    <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary"
-               Href="/listings/new">New listing</MudButton>
+    <AuthorizeView Policy="ListingsWriter">
+        <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary"
+                   Href="/listings/new">New listing</MudButton>
+    </AuthorizeView>
 </div>
 
 <MudDataGrid T="Listing" Items="_listings" Loading="_loading" Dense="true" Hover="true"
@@ -32,12 +34,16 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                    aria-label="Details"
                                    OnClick="@(() => Nav.NavigateTo($"/listings/{context.Item.Id}"))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                   aria-label="Edit"
-                                   OnClick="@(() => Nav.NavigateTo($"/listings/{context.Item.Id}/edit"))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                   aria-label="Delete"
-                                   OnClick="@(() => DeleteAsync(context.Item))" />
+                    <AuthorizeView Policy="ListingsWriter" Context="auth">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                       aria-label="Edit"
+                                       OnClick="@(() => Nav.NavigateTo($"/listings/{context.Item.Id}/edit"))" />
+                    </AuthorizeView>
+                    <AuthorizeView Policy="ListingsAdmin" Context="auth">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       aria-label="Delete"
+                                       OnClick="@(() => DeleteAsync(context.Item))" />
+                    </AuthorizeView>
                 </div>
             </CellTemplate>
         </TemplateColumn>
@@ -51,6 +57,9 @@
 </MudDataGrid>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     private IReadOnlyList<Listing> _listings = [];
     private bool _loading = true;
     private string _search = "";
@@ -72,6 +81,12 @@
 
     private async Task DeleteAsync(Listing listing)
     {
+        if (!await AuthState.IsInRoleAsync("Admin"))
+        {
+            Snackbar.Add("You do not have permission to delete listings.", Severity.Error);
+            return;
+        }
+
         var parameters = new DialogParameters<DeleteListingDialog> { { x => x.Title, listing.Title } };
         var dialog = await DialogService.ShowAsync<DeleteListingDialog>("Delete listing", parameters);
         var result = await dialog.Result;

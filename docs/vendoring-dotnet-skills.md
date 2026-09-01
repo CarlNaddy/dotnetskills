@@ -17,9 +17,12 @@ It is **not** run from this template — it operates on `claude-plugins-dotnet`.
 
 ## 0. Prerequisites
 
-- `git`, `jq`, `bash`
+- `git`, `bash`, `python3` (stdlib `json` only — no `pip` packages)
 - Push access to `CarlNaddy/claude-plugins-dotnet`
 - `claude` CLI (for `claude plugin validate`) — recommended
+
+> On Windows, run from **Git Bash**. If `python3` resolves to the Microsoft
+> Store alias stub, the script falls back to `python` / `py` automatically.
 
 ## 1. Get the target repo
 
@@ -65,12 +68,20 @@ resync.
 #
 # <ref> = branch, tag, or commit of github.com/dotnet/skills (default: main).
 # Re-run to resync to a newer upstream; review the diff, then commit + tag.
+#
+# Needs: git, bash, and python3 (stdlib json only).
 
 set -euo pipefail
 UPSTREAM="https://github.com/dotnet/skills.git"
 REF="${1:-main}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
-command -v jq >/dev/null || { echo "need jq on PATH" >&2; exit 1; }
+
+# find a python that actually runs (skip the Windows Store alias stub)
+PY=""
+for c in python py python3; do
+    if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys' >/dev/null 2>&1; then PY="$c"; break; fi
+done
+[ -n "$PY" ] || { echo "need a working python 3 on PATH" >&2; exit 1; }
 [ -f .claude-plugin/local-plugins.json ] || { echo "missing .claude-plugin/local-plugins.json" >&2; exit 1; }
 
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -83,9 +94,16 @@ when="$(git -C "$tmp/s" log -1 --format=%cI HEAD)"
 echo "    resolved $sha ($when)"
 
 echo "==> replacing vendored plugin trees (keeping local dirs)"
-# only remove dirs that are NOT declared in local-plugins.json
-keep="$(jq -r '.[].source | sub("^\\./plugins/";"")' .claude-plugin/local-plugins.json)"
+# dir names declared in local-plugins.json — these are NOT wiped
+keep="$("$PY" - <<'PY'
+import json
+for e in json.load(open(".claude-plugin/local-plugins.json")):
+    s = e["source"]
+    print(s[len("./plugins/"):] if s.startswith("./plugins/") else s)
+PY
+)"
 for d in plugins/*/; do
+    [ -d "$d" ] || continue
     n="$(basename "$d")"
     grep -qxF "$n" <<<"$keep" || rm -rf "$d"
 done
@@ -109,20 +127,28 @@ Everything under \`plugins/\` except the dirs listed in
 EOF
 
 echo "==> regenerating .claude-plugin/marketplace.json"
-jq -n \
-  --slurpfile up   "$tmp/s/.claude-plugin/marketplace.json" \
-  --slurpfile seed ".claude-plugin/local-plugins.json" \
-  '{
-     name: "dotnet-agent-skills",
-     owner: { name: "CarlNaddy" },
-     metadata: { description: "MudBlazor consumer skill + a frozen copy of Microsoft dotnet/skills (see vendor/dotnet-skills/UPSTREAM.md)." },
-     plugins: ($seed[0] + $up[0].plugins)
-   }' > .claude-plugin/marketplace.json
+"$PY" - "$tmp/s/.claude-plugin/marketplace.json" <<'PY'
+import json, sys
+up   = json.load(open(sys.argv[1]))
+seed = json.load(open(".claude-plugin/local-plugins.json"))
+out = {
+    "name": "dotnet-agent-skills",
+    "owner": {"name": "CarlNaddy"},
+    "metadata": {
+        "description": "MudBlazor consumer skill + a frozen copy of Microsoft dotnet/skills "
+                       "(see vendor/dotnet-skills/UPSTREAM.md)."
+    },
+    "plugins": seed + up["plugins"],
+}
+with open(".claude-plugin/marketplace.json", "w", encoding="utf-8", newline="\n") as f:
+    json.dump(out, f, indent=2)
+    f.write("\n")
+PY
 
 echo
 echo "Frozen at dotnet/skills@$sha"
 echo "Next:"
-echo "  jq -e . .claude-plugin/marketplace.json >/dev/null && echo 'manifest OK'"
+echo "  $PY -m json.tool .claude-plugin/marketplace.json >/dev/null && echo 'manifest OK'"
 echo "  claude plugin validate ."
 echo "  git add -A && git commit -m \"Vendor dotnet/skills @ ${sha:0:12}\""
 echo "  git tag dotnet-skills-\$(date +%Y%m%d) && git push --follow-tags"
@@ -167,7 +193,7 @@ selectable.
 ## 5. Validate
 
 ```bash
-jq -e . .claude-plugin/marketplace.json >/dev/null && echo "manifest OK"
+python -m json.tool .claude-plugin/marketplace.json >/dev/null && echo "manifest OK"
 claude plugin validate .
 ```
 

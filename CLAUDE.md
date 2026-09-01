@@ -56,21 +56,32 @@ never diverge from production. Decided in parity plan P1.1; wiring starts at P1.
 ## Claude Code plugins & skills
 
 AI tooling for this repo is pinned in `.claude/settings.json` (committed). It
-declares two marketplaces and enables their plugins:
+declares one marketplace and enables plugins from it:
 
-| Marketplace | Source | Plugins |
+| Marketplace | Source | Enabled plugins |
 |---|---|---|
-| `dotnet-agent-skills` | GitHub `dotnet/skills` | `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-data`, `dotnet-test`, `dotnet11` |
-| `mudblazor-agent-skills` | GitHub `CarlNaddy/claude-plugins-dotnet` | `mudblazor` |
+| `dotnet-agent-skills` | GitHub `CarlNaddy/claude-plugins-dotnet` | `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-data`, `dotnet-test`, `dotnet11`, `mudblazor` |
 
-**Onboarding:** open the repo in Claude Code and accept the prompts to trust the
-`dotnet-agent-skills` and `mudblazor-agent-skills` marketplaces. The plugins
-listed under `enabledPlugins` install automatically. No plugin content is
-committed — it is cached under `~/.claude/plugins/` and re-fetched from GitHub.
-Run `bash scripts/check-plugins.sh` to confirm every expected marketplace and
-plugin is installed and enabled (`--fix` registers the marketplaces and installs
-any that are missing, for headless / CI setups). `scripts/preflight.sh` also
-reports this.
+`CarlNaddy/claude-plugins-dotnet` is a **vendored freeze** of Microsoft's
+[`dotnet/skills`](https://github.com/dotnet/skills) (all its plugins, copied
+verbatim at a known commit — see that repo's `vendor/dotnet-skills/UPSTREAM.md`)
+plus the app-maintained `mudblazor` plugin. Freezing gives deterministic skill
+behavior across machines and over time; the marketplace only moves when its
+`scripts/vendor-dotnet-skills.sh` is re-run and pushed. It also carries, but does
+**not** enable here, the rest of the upstream set — `dotnet-advanced`,
+`dotnet-ai`, `dotnet-diag`, `dotnet-maui`, `dotnet-msbuild`, `dotnet-nuget`,
+`dotnet-template-engine`, `dotnet-test-migration`, `dotnet-upgrade`,
+`dotnet-experimental`; add any to `enabledPlugins` per project if a task needs it.
+Building and resyncing that marketplace repo:
+[`docs/vendoring-dotnet-skills.md`](docs/vendoring-dotnet-skills.md).
+
+**Onboarding:** open the repo in Claude Code and accept the prompt to trust the
+`dotnet-agent-skills` marketplace. The plugins listed under `enabledPlugins`
+install automatically. No plugin content is committed here — it is cached under
+`~/.claude/plugins/` and re-fetched from the marketplace repo. Run
+`bash scripts/check-plugins.sh` to confirm every expected marketplace and plugin
+is installed and enabled (`--fix` registers the marketplace and installs any that
+are missing, for headless / CI setups). `scripts/preflight.sh` also reports this.
 Keep `.claude/settings.json` to project config only; personal prefs (`theme`,
 etc.) belong in your user `~/.claude/settings.json`.
 
@@ -105,9 +116,10 @@ one via `dotnet:setup-local-sdk`.
 | Any MudBlazor work — setup, components, theming, app-owned components | `mudblazor:mudblazor` |
 
 No upstream skill covers MudBlazor, so we maintain our own: the **`mudblazor`
-plugin** (`mudblazor-agent-skills` marketplace →
-`github.com/CarlNaddy/claude-plugins-dotnet`). It provides the `mudblazor:mudblazor`
-skill — `SKILL.md` plus `references/patterns.md` (consumer code patterns) and
+plugin**, hosted in the `dotnet-agent-skills` marketplace repo
+(`github.com/CarlNaddy/claude-plugins-dotnet`) alongside the vendored
+`dotnet/skills` copy. It provides the `mudblazor:mudblazor` skill — `SKILL.md`
+plus `references/patterns.md` (consumer code patterns) and
 `references/authoring-components.md` (conventions for components this app builds
 on MudBlazor). Read it before any MudBlazor work. The `dotnet-blazor:*` skills
 still apply to the component architecture around MudBlazor. To change the

@@ -70,13 +70,19 @@ the repo is a reference app; the reusable deliverable is the plugin/skill setup
 
 ### Plugins (pinned in `.claude/settings.json`)
 
+All enabled from one marketplace, `dotnet-agent-skills` →
+`CarlNaddy/claude-plugins-dotnet` — a vendored freeze of Microsoft's
+`dotnet/skills` (copied verbatim at a known commit) plus the app-maintained
+`mudblazor` plugin. Deterministic skill behavior; the marketplace moves only when
+its `vendor-dotnet-skills.sh` is re-run.
+
 - [x] `dotnet@dotnet-agent-skills` (0.2.3) — SDK management, C# LSP
 - [x] `dotnet-aspnetcore@dotnet-agent-skills` (0.1.1) — Web API, file upload, OTel, Blazor Server→WebApp conversion
 - [x] `dotnet-blazor@dotnet-agent-skills` (0.1.1) — Blazor component authoring, forms, state, auth, prerendering, JS interop
 - [x] `dotnet-data@dotnet-agent-skills` (0.1.5) — EF Core CRUD scaffold + query optimization
 - [x] `dotnet-test@dotnet-agent-skills` (0.2.18) — full test lifecycle + quality analysis + sub-agents
 - [x] `dotnet11@dotnet-agent-skills` (0.1.1) — System.Text.Json on .NET 11
-- [x] `mudblazor@mudblazor-agent-skills` (0.1.0) — all MudBlazor work (own-maintained)
+- [x] `mudblazor@dotnet-agent-skills` (0.1.0) — all MudBlazor work (own-maintained)
 
 ### Skills by plugin
 

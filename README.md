@@ -118,8 +118,10 @@ dotnet test
 `CLAUDE.md` is the source of truth: stack, project layout, naming/analyzer
 policy, MudBlazor rules, data-access and migration conventions, tests,
 localization. The pinned Claude Code plugins/skills live in
-`.claude/settings.json` (two GitHub marketplaces — `dotnet/skills` and
-`CarlNaddy/claude-plugins-dotnet`).
+`.claude/settings.json` — one GitHub marketplace,
+`CarlNaddy/claude-plugins-dotnet`, which is a **vendored freeze** of Microsoft's
+`dotnet/skills` plus the app-maintained `mudblazor` plugin, so skill behavior is
+deterministic across machines and over time.
 
 ## Roadmap
 

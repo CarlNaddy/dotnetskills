@@ -6,16 +6,10 @@
     "dotnet-data@dotnet-agent-skills": true,
     "dotnet-test@dotnet-agent-skills": true,
     "dotnet11@dotnet-agent-skills": true,
-    "mudblazor@mudblazor-agent-skills": true
+    "mudblazor@dotnet-agent-skills": true
   },
   "extraKnownMarketplaces": {
     "dotnet-agent-skills": {
-      "source": {
-        "source": "github",
-        "repo": "dotnet/skills"
-      }
-    },
-    "mudblazor-agent-skills": {
       "source": {
         "source": "github",
         "repo": "CarlNaddy/claude-plugins-dotnet"

@@ -17,7 +17,9 @@ worked CRUD example.
 | Local infra | `compose.yaml` (PostgreSQL) |
 
 Also included: central package management, analyzers-as-errors + `.editorconfig`,
-EF migration conventions (`docs/ef-migrations.md`), an `en`/`de` localization
+EF migration conventions (`docs/ef-migrations.md`), ASP.NET Core Identity with
+config-gated Google/Microsoft/GitHub sign-in (setup:
+`docs/external-login.md`), an `en`/`de` localization
 scaffold, and a worked reference feature — `Listing` CRUD end to end
 (entity → migration → MudBlazor grid/form/dialog → seed data).
 

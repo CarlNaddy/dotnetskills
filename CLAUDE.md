@@ -139,7 +139,10 @@ Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
   and `GitHub`), from user-secrets in dev / env vars in prod, never
   `appsettings*.json`. Callback paths are the handler defaults —
   `/signin-google`, `/signin-microsoft`, `/signin-github` — register these as
-  the redirect URIs with each provider.
+  the redirect URIs with each provider. Step-by-step provider registration, the
+  exact `dotnet user-secrets` commands, dev/prod redirect URIs, and
+  troubleshooting (incl. "no buttons on the Login page" = nothing configured):
+  [`docs/external-login.md`](docs/external-login.md).
   - Flow: `Login.razor` renders one `<form>` per configured provider →
     `POST /Account/PerformExternalLogin` (`Endpoints/AccountEndpoints.cs`)
     issues the `Challenge` → provider → `/signin-<provider>` middleware →

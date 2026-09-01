@@ -364,7 +364,13 @@ project.
   changes.
 - Test method names: `Method_under_test_does_x` (underscores; CA1707 is off).
   Assertions must be deterministic — no clock, network, process, or real
-  filesystem. Test-data builders/`Bogus` come in P2.2.
+  filesystem.
+- **Test data:** fluent builders under `tests/dotnetskills.Tests/TestData/`, one
+  per entity (`ListingBuilder` is the worked example — P2.2). Valid-by-default,
+  `With*` methods to pin the fields a test cares about, `Build()` / `BuildMany(n)`
+  / static `Valid()`. Defaults come from `Bogus` with a **fixed seed** so
+  unconfigured data is identical every run; pass a seed to the constructor for a
+  distinct-but-repeatable set. Conventions: [`docs/test-data.md`](docs/test-data.md).
 
 ## Reuse — starting a new project
 

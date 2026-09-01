@@ -340,9 +340,19 @@ test-*data* convention.
   project; `tests/**` excluded from the web project's globs (root-level Web SDK).
   3 smoke tests on `Listing` + its data annotations. `dotnet test` → 3 passed.
   CPM (P0.4) done in the same change.
-- [ ] **P2.2** Test-data strategy (FactoryBot analog): builder / object-mother
+- [x] **P2.2** Test-data strategy (FactoryBot analog): builder / object-mother
   pattern, `Bogus` for fake data. _Skill:_ `code-testing-agent` (assist)
   · _Accept:_ convention doc + one reusable builder.
+  _Done:_ `Bogus` 35.6.3 added (CPM, test project only). `tests/dotnetskills.Tests/
+  TestData/ListingBuilder.cs` — `sealed` fluent builder, valid-by-default,
+  `With*` / `.With(x => …)` / `Build` / `BuildMany` / static `Valid()`; defaults
+  from a `Faker<Listing>` pinned with `.UseSeed()` (fixed `DefaultSeed`, or a
+  caller seed) so data is deterministic per CLAUDE.md — dates generated off a
+  fixed reference, no wall clock. `ListingBuilderTests.cs` (7 tests:
+  valid-by-default, overrides win, same-seed-same-data, different-seed-differs,
+  `BuildMany` count + override propagation). Convention doc
+  [`docs/test-data.md`](test-data.md); `CLAUDE.md` Tests section points at it.
+  `dotnet test` → 10/10 (3 pre-existing + 7), clean build with analyzers.
 - [ ] **P2.3** EF Core test approach: SQLite in-memory vs Testcontainers; shared
   fixture / base class. _Skill:_ `code-testing-agent` · _Accept:_ one
   `DbContext`/repository test passing.

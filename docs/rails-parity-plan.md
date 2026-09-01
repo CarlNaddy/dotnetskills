@@ -167,8 +167,9 @@ its `vendor-dotnet-skills.sh` is re-run.
 
 Dependency order: **P0 → P1 → (P2, P3 in parallel) → P4 → P5**. P0.7 (localization)
 runs alongside P1. P6 and P7 any time. Items tagged **(vNext)** — full
-OpenTelemetry (P4.6) and a Redis backplane (P4.3 / P5.2) — are out of scope for
-the first milestone.
+OpenTelemetry (P4.6), a Redis backplane (P4.3 / P5.2), and the `dotnet new`
+template (P7.2) — are out of scope for the first milestone. **P7 is done at
+P7.1** (script route); P7.2 deferred with a pickup trigger, see that item.
 
 ### P0 — Foundations & conventions
 
@@ -353,15 +354,73 @@ test-*data* convention.
 
 ### P3 — Authentication & authorization
 
-- [ ] **P3.1** Choose the model: **ASP.NET Core Identity** (self-contained, Devise
+- [x] **P3.1** Choose the model: **ASP.NET Core Identity** (self-contained, Devise
   analog), with external OAuth2 providers layered on (P3.4). _Skill:_
   `configure-auth` · _Accept:_ decision in `CLAUDE.md`.
-- [ ] **P3.2** Add Identity + EF stores; migration for the Identity tables.
+  _Done:_ `CLAUDE.md` has an **"Authentication & authorization"** section + a
+  Stack-table row. Decisions recorded: ASP.NET Core Identity, cookie auth, roles
+  on; `ApplicationUser : IdentityUser` under `Data/`; Identity tables in
+  **`AppDbContext`** (which becomes `IdentityDbContext<ApplicationUser>`) — one
+  context, one migration history, no separate `ApplicationDbContext`;
+  hand-authored MudBlazor Identity pages under `Components/Account/` (not the
+  Bootstrap Identity RCL); Identity pages static SSR via
+  `[ExcludeFromInteractiveRouting]` + `AcceptsInteractiveRouting()`, interactive
+  components use `CascadingAuthenticationState` / `AuthorizeView`; external
+  provider secrets in user-secrets (dev) / env vars (prod); dev admin + `Admin`
+  role seeded by `DbSeeder` (P3.6).
+- [x] **P3.2** Add Identity + EF stores; migration for the Identity tables.
   _Skill:_ `configure-auth` + `create-datadriven-aspnetcore` · _Accept:_ user
   tables migrated.
-- [ ] **P3.3** Login / logout / register / manage pages, respecting render mode
+  _Done:_ `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.11 added
+  (CPM). `Data/ApplicationUser.cs` (`ApplicationUser : IdentityUser`);
+  `AppDbContext` now `IdentityDbContext<ApplicationUser>` (`OnModelCreating`
+  param renamed `modelBuilder` → `builder` to satisfy CA1725 against the base
+  signature). `Program.cs`: `AddCascadingAuthenticationState()`,
+  `AddAuthorization()`, `AddAuthentication(...).AddIdentityCookies()`,
+  `AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>()
+  .AddEntityFrameworkStores<AppDbContext>().AddSignInManager()
+  .AddDefaultTokenProviders()`. Identity's EF stores need a scoped
+  `AppDbContext`, but P1.8 registered only `AddDbContextFactory` (components
+  outlive a request scope) — added `AddScoped<AppDbContext>(sp =>
+  sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext())`
+  so both consumers share one connection-string configuration.
+  `AddIdentity` migration created and applied to the Docker Postgres:
+  `AspNetUsers`, `AspNetRoles`, `AspNetUserClaims`, `AspNetUserLogins`,
+  `AspNetUserRoles`, `AspNetUserTokens`, `AspNetRoleClaims` confirmed via
+  `psql \dt`. Clean build (0 warnings), `dotnet test` 3/3 passed, app boots and
+  `/` + `/Listings` both return 200 with Identity services registered.
+- [x] **P3.3** Login / logout / register / manage pages, respecting render mode
   (Identity UI as static SSR under a global-interactive app). _Skill:_
   `configure-auth` + `support-prerendering` · _Accept:_ register + sign in works.
+  _Done:_ `Components/Account/Pages/{Register,Login}.razor` +
+  `Pages/Manage/Index.razor`, each `@attribute [ExcludeFromInteractiveRouting]`
+  (Manage also `[Authorize]`); `Components/Routes.razor` now uses
+  `AuthorizeRouteView` with a `<NotAuthorized>` template that renders the new
+  `Components/Account/Shared/RedirectToLogin.razor`; `Components/Account/
+  IdentityRedirectManager.cs` wraps the static-SSR `NavigationException`
+  redirect pattern; `Endpoints/AccountEndpoints.cs` maps `POST /Account/Logout`
+  as a minimal API (sign-out can't run inside a component); app-bar
+  `Components/Layout/AccountMenu.razor` shows Login/Register or
+  username+Account+Logout via `AuthorizeView`.
+  **Real finding, not anticipated in the plan:** a MudTextField-built register
+  form compiled and rendered fine but silently dropped every field on submit —
+  MudBlazor's inputs bind through interactive JS/event wiring and render no
+  `name` attribute, so they can't participate in the native `<form>` POST a
+  static-SSR `EditForm` needs. Fixed by switching Identity's *bound inputs* to
+  native `InputText` / `InputCheckbox` / `ValidationMessage`, styled via new
+  `.account-input` / `.account-validation` classes in `wwwroot/app.css`
+  (MudButton / MudAlert / MudText / MudLink / MudGrid are unaffected and stay
+  MudBlazor). Recorded in `CLAUDE.md` as the one deliberate exception to "all
+  UI is MudBlazor". Also hit and fixed along the way: `MudAlert`'s `Hidden`
+  attribute isn't valid (MUD0002) — replaced with an `@if` block; `[SupplyPara
+  meterFromForm]` properties with an object initializer trip BL0008 — suppressed
+  with a comment explaining why the initializer is safe here.
+  **Verified end-to-end against the real Docker Postgres** (curl, not just a
+  build): registered a user → 302 + `.AspNetCore.Identity.Application` cookie
+  set → row landed in `AspNetUsers` → `/Account/Manage` showed the real
+  username/email → logout cleared the session → `/Account/Manage` redirected
+  anonymous to `/Account/Login?ReturnUrl=...` → logging back in restored access.
+  Clean build, `dotnet test` 3/3 passed throughout.
 - [ ] **P3.4** External login providers (OAuth2): **Google** and **Microsoft** via
   the first-party `Microsoft.AspNetCore.Authentication.Google` /
   `.MicrosoftAccount` handlers; **GitHub** via `AspNet.Security.OAuth.GitHub`
@@ -448,6 +507,12 @@ The repo is a working reference app + a curated Claude Code setup. The reusable
 deliverable is the plugin/skill config + conventions + docs; the app code is a
 worked example, not something to copy wholesale.
 
+**Status (2026-09-01): P7 is considered done at P7.1.** The script route
+(`new-project.sh` + `remove-sample.sh` + `update-from-template.sh`) delivers the
+P7 outcome — a new, building project from the baseline, plus a forward-sync path
+for spun-off projects that a `dotnet new` template can't provide. P7.2 is
+deferred to **(vNext)** — see below.
+
 - [x] **P7.1** Interim route — usable as a GitHub **template repository**
   (Option A). Repo **Settings → "Template repository"** is enabled
   (`is_template: true`); **"Use this template"** is live. `README.md` is the
@@ -459,13 +524,23 @@ worked example, not something to copy wholesale.
   `@fission-ai/openspec` for spec-driven feature work). **Both modes verified
   end-to-end** on fresh clones: skeleton → build + 1 test pass; `--with-sample`
   → build + 3 tests pass, seed applies 3 migrations.
-- [ ] **P7.2** Real `dotnet new` custom template — the actual `rails new`
+- [ ] **P7.2 (vNext)** Real `dotnet new` custom template — the actual `rails new`
   capability. `.template.config/template.json` with parameters: project name,
   `--sample` (include/exclude the `Listing` feature), `--db` (sqlite|postgres).
   Test via `dotnet new install .` → `dotnet new <shortName> -n MyApp`. Optionally
   publish as a NuGet template package so a team shares it. _Skill:_ — · _Accept:_
   `dotnet new <shortName> -n Foo --sample false` yields a project that builds
   with no `Listing` code.
+  **Deferred** — the P7.1 scripts already produce a building project from the
+  baseline; the remaining gap is ergonomics (two steps + Git Bash instead of one
+  command) and distribution (`dotnet new list`, NuGet), not capability. P7.2 also
+  would **not** replace `update-from-template.sh` (a `dotnet new` project is
+  disconnected from the template once created), so that script stays regardless.
+  _Trigger to pick this up:_ a second team or org-wide sharing of the template
+  appears — at which point `dotnet new list` discoverability and NuGet packaging
+  start to earn the `template.json` maintenance cost. _Known limitation until
+  then:_ `new-project.sh` / `update-from-template.sh` require bash (Git Bash on
+  Windows) — noted in [`docs/new-project.md`](new-project.md).
 
 ---
 

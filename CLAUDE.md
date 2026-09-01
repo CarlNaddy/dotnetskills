@@ -15,6 +15,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
 | Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
+| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; external OAuth2 layered on later — Identity + stores + migration wired (parity plan P3.2); login/register pages next (P3.3) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -52,6 +53,74 @@ never diverge from production. Decided in parity plan P1.1; wiring starts at P1.
 - **Seeding:** `dotnet run -- seed` — applies pending migrations, then inserts
   sample data if the DB is empty (idempotent). Fresh clone → one command.
 - Entities are the model — query `DbContext` directly, no repository layer.
+
+## Authentication & authorization
+
+**ASP.NET Core Identity** with EF Core stores — the self-contained
+username/password model (the Devise analog), cookie authentication, roles
+enabled. Decided in parity plan **P3.1**; Identity + stores + the `AddIdentity`
+migration wired in **P3.2**; Register/Login/Logout/Manage pages in **P3.3**.
+Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
+
+- **User entity:** `ApplicationUser : IdentityUser` under `Data/` (one type per
+  file, like every other entity). Add profile columns to it directly — no
+  separate profile table until one is actually warranted.
+- **DbContext:** the Identity tables live in **`AppDbContext`**, which is
+  `AppDbContext : IdentityDbContext<ApplicationUser>` — one database, one
+  context, one migration history (monolith-first, guiding principle 1). No
+  separate `ApplicationDbContext`. `OnModelCreating` must call
+  `base.OnModelCreating(builder)` first (and the parameter is named `builder` to
+  match the base — CA1725).
+- **Context lifetime:** components use `IDbContextFactory<AppDbContext>` (P1.8),
+  but the Identity EF stores need a *scoped* `AppDbContext` —
+  `Program.cs` adds `AddScoped<AppDbContext>(sp => sp
+  .GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext())` so
+  both share one configuration.
+- **Roles & policies:** `AddRoles<IdentityRole>()` + `AddDefaultTokenProviders()`.
+  Use a named policy when a rule is more than a role check; `[Authorize(Roles =
+  "…")]` otherwise.
+- **Identity UI:** hand-authored Razor pages under `Components/Account/`
+  (`Pages/Register.razor`, `Pages/Login.razor`, `Pages/Manage/Index.razor`).
+  The stock Identity UI Razor Class Library ships Bootstrap markup and is
+  excluded by the "all UI is MudBlazor" rule.
+- **The one MudBlazor exception — form inputs:** Identity pages use **native**
+  `InputText` / `InputCheckbox` / `ValidationMessage` for bound fields, styled
+  with the `.account-input` / `.account-validation` classes in `wwwroot/app.css`
+  — not `MudTextField` / `MudCheckBox`. MudBlazor's inputs bind through
+  interactive JS/event wiring and render **no `name` attribute**, so they can't
+  take part in the native `<form>` POST a static-SSR `EditForm` needs (found
+  the hard way in P3.3: a `MudTextField`-built register form posted with the
+  email/password fields silently missing). `MudButton` / `MudAlert` / `MudText`
+  / `MudLink` / `MudGrid` are unaffected — they don't carry bound form values —
+  and stay MudBlazor everywhere, including these pages.
+- **Sign-out is a minimal API endpoint, not a component:**
+  `Endpoints/AccountEndpoints.cs` maps `POST /Account/Logout`. A plain
+  `<form action="Account/Logout" method="post">` (with `<AntiforgeryToken />`)
+  posts to it from anywhere — the interactive app-bar `AccountMenu` included —
+  because it's a real HTTP request handled by routing, independent of the
+  calling page's render mode.
+- **Render mode (the trap):** `SignInManager` / `UserManager` touch `HttpContext`
+  and throw in interactive components. Every Identity *page* (Register, Login,
+  Manage) renders as **static SSR** — `@attribute [ExcludeFromInteractiveRouting]`
+  — and `App.razor` returns a `null` render mode when
+  `HttpContext.AcceptsInteractiveRouting()` is false. Interactive components
+  (`AccountMenu`, `Routes.razor`'s `AuthorizeRouteView`) read auth state from
+  `CascadingAuthenticationState` / `Task<AuthenticationState>` / `AuthorizeView`,
+  never from `HttpContext.User`; `Program.cs` adds
+  `AddCascadingAuthenticationState()`. Anonymous hits on an `[Authorize]` page
+  render `Components/Account/Shared/RedirectToLogin.razor` via
+  `AuthorizeRouteView`'s `<NotAuthorized>` template.
+- **Redirect after a static-SSR form post:** `NavigationManager.NavigateTo`
+  during static rendering throws a `NavigationException` the framework turns
+  into an HTTP redirect — wrapped as `Components/Account/IdentityRedirectManager`
+  so Register/Login don't repeat the open-redirect guard.
+- **External login (P3.4):** Google and Microsoft via the first-party
+  `Microsoft.AspNetCore.Authentication.Google` / `.MicrosoftAccount` handlers;
+  GitHub via `AspNet.Security.OAuth.GitHub` (Microsoft ships no handler).
+  Provider secrets go in user-secrets in dev, environment variables in prod —
+  never `appsettings*.json`.
+- **Seeding:** a known dev admin user + the `Admin` role are seeded by
+  `Data/Seed/DbSeeder.cs` (P3.6), idempotent like the rest of the seed.
 
 ## Claude Code plugins & skills
 
@@ -128,7 +197,10 @@ guidance, edit the plugin repo and bump its `version`, not this file.
 ## MudBlazor rules (always apply)
 
 - **All UI is MudBlazor.** No Bootstrap, Tailwind, or hand-rolled grid/utility
-  CSS. Component-local tweaks go in a collocated `.razor.css`.
+  CSS. Component-local tweaks go in a collocated `.razor.css`. **One exception:**
+  bound form inputs on Identity's static-SSR pages use native `InputText` /
+  `InputCheckbox`, not `MudTextField` / `MudCheckBox` — see "Authentication &
+  authorization" above.
 - **Pin the version exactly** in the `.csproj`. The API differs a lot across
   v6/v7/v8 and model knowledge is often stale — check the installed version and
   confirm signatures against `https://mudblazor.com/api/<component>` before

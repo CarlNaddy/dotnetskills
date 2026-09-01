@@ -1,34 +1,92 @@
 # Rails-parity assessment: .NET + Blazor + AI agent skills
 
-_Assessment date: 2026-08-31. Reviews whether this repo's stack plus its Claude Code
-plugins/skills can match Ruby on Rails developer productivity._
+_Assessment date: 2026-09-01 (supersedes the 2026-08-31 baseline). Reviews whether
+this repo's stack plus its Claude Code plugins/skills can match Ruby on Rails
+developer productivity._
+
+_Companion to [`rails-parity-plan.md`](./rails-parity-plan.md) — that file is the
+sequenced task list; this file is the analysis._
 
 ## Verdict
 
-For the **inner loop of building a UI-over-data CRUD feature**, this setup gets close
-to Rails once EF Core is actually wired — and it is **ahead of Rails on testing and
-type safety**. But out of the box today it is **not** at Rails productivity, for two
-reasons:
+**The core inner loop is at Rails parity.** A developer can define a model, evolve
+its schema through reversible migrations, scaffold a list/details/create/edit/delete
+UI over it, and seed a working dataset — all without leaving the toolchain, in a
+few agent prompts. The single biggest gap in the 2026-08-31 baseline (no ORM
+installed at all) is closed: EF Core 10 + PostgreSQL, `dotnet ef`, a migrations
+convention doc, and a `dotnet run -- seed` verb are wired and verified end-to-end
+against a real entity.
 
-1. The data layer is still `TBD` — no ORM is installed at all, so the single biggest
-   Rails superpower (ActiveRecord + migrations from minute one) is not there yet.
-2. The "batteries included" tier — background jobs, mailers, caching, real-time, file
-   storage, seeds, deploy — has **no skill and no library** behind it.
+**Full-app parity is roughly half done.** What remains is the larger half by
+volume and the part where Rails' "it's already there" advantage is structural:
 
-## Project state inspected
+1. **Auth is functional but not finished** (P3) — Identity, a user model, and
+   working register/login/logout/manage pages exist and are verified end-to-end
+   against Postgres. Roles applied to a real protected feature, external OAuth2,
+   and an admin seed (P3.4–P3.6) are still open.
+2. **The batteries tier has no library and no skill** (P4) — background jobs,
+   mailers, caching/rate-limiting, file storage, real-time. Each is a
+   decide-a-library + wire-a-seam + write-a-convention exercise. Rails hands these
+   over; here they stay decisions to make and document.
+3. **No deployment story** (P5) — local DB comes up with one command, but there is
+   no app container, no full-stack `compose.yaml`, and no CI/CD pipeline.
 
-- `dotnetskills.csproj` — single project, no Domain/Infra/Web layering. (A `.slnx`
-  was added afterwards, then de-scoped — see _Scoping decisions_ below.)
-- Blazor Web App, .NET 10, MudBlazor 9.9.0, global Interactive Server render mode.
-- No EF Core package, no `DbContext`, no provider, no connection string, no
-  `dotnet ef` tool, no local tool manifest.
-- No test project.
-- No auth / Identity.
-- `CLAUDE.md` marks Data access / Tests / Conventions all `TBD`.
-- Template pages (Counter, Weather) still present alongside a Havenly landing page
-  and a gallery dialog.
+On **testing** and **type safety** the setup is **ahead of Rails** and was already
+ahead at baseline.
+
+## Progress since the 2026-08-31 baseline
+
+| Phase | Then | Now |
+|---|---|---|
+| **P0** Foundations & conventions | all open | ✅ **complete** — `Directory.Build.props` (nullable, analyzers, warnings-as-errors), `.editorconfig`, central package management, `CLAUDE.md` conventions filled in, template demo pages removed, localization foundation (`en`/`de`) wired |
+| **P1** Data layer (EF Core) | nothing installed | ✅ **complete** — Npgsql EF Core 10, `AppDbContext` via `AddDbContextFactory`, `dotnet-ef` local tool, `InitialCreate` + real-entity migrations applied, [`docs/ef-migrations.md`](./ef-migrations.md) conventions with a worked column-rename, `dotnet run -- seed` (idempotent, migrates first), full `Listing` CRUD in MudBlazor verified against Postgres |
+| **P2** Testing | no project | 🟡 **P2.1 done** — `tests/dotnetskills.Tests/` (xUnit v3 on MTP, `OutputType=Exe`, no `Microsoft.NET.Test.Sdk`), discovered by `dotnet test`. P2.2–P2.5 open |
+| **P3** Auth | open | 🟡 **P3.1–P3.3 done** — model recorded; Identity + EF stores wired, `AddIdentity` migration applied; Register/Login/Logout/Manage pages built and **verified end-to-end against Postgres** (register → cookie set → DB row → manage → logout → protected-page redirect → re-login). Surfaced a real MudBlazor constraint: its inputs can't post through static-SSR forms — fixed with native `InputText`/`InputCheckbox`, recorded as the one exception to "all UI is MudBlazor". OAuth2 (P3.4), roles/`[Authorize]` on a real feature (P3.5), admin seed (P3.6) open |
+| **P4** Batteries | open | ❌ open |
+| **P5** Deployment | open | 🟡 local Postgres via `compose.yaml`; app image / full stack / CI-CD open |
+| **P7** Packaging & reuse | open | ✅ **done at P7.1** — GitHub template repo + `scripts/new-project.sh` (skeleton by default, `--with-sample` keeps the `Listing` feature) + `scripts/update-from-template.sh` (forward-sync for spun-off projects), all verified on fresh clones. **P7.2 (`dotnet new` template) deferred to (vNext)** — the scripts already produce a building project; the gap is ergonomics + distribution, not capability, and a `dotnet new` project loses the forward-sync path |
+
+## Project state inspected (2026-09-01)
+
+- `dotnetskills.csproj` — single Web SDK project at the repo root; `tests/**`
+  excluded from its globs. `dotnetskills.slnx` holds web + test projects.
+- Blazor Web App, .NET 10 (SDK 10.0.400 pinned), MudBlazor 9.9.0, global
+  Interactive Server render mode; `Error.razor` forced to static SSR.
+- **EF Core 10 + PostgreSQL** — `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3,
+  `Microsoft.EntityFrameworkCore.Design` 10.0.11 (build-only), Relational
+  transitively pinned to 10.0.11. `AppDbContext` registered with
+  `AddDbContextFactory` (MS "Blazor with EF Core"). Connection string
+  `ConnectionStrings:Default` — user-secrets in dev, env var in prod, startup
+  guard if unset.
+- **Migrations** — `dotnet-ef` 10.0.11 via `.config/dotnet-tools.json`; three
+  migrations in `Data/Migrations/` (`InitialCreate`, `AddListing`,
+  `RenameAreaColumn`) applied to the Docker Postgres.
+- **Seed** — `dotnet run -- seed` dispatched before the web host
+  (`Data/Seed/SeedCommand.cs` → `MigrateAsync()` then `DbSeeder`, 5 idempotent
+  sample listings).
+- **Sample feature** — `Data/Listing.cs` (+ `ListingStatus` enum stored as
+  string), full CRUD in `Components/Pages/Listings/`. Present in this repo as the
+  P1 validation vehicle / test fixture / `--with-sample` payload; stripped by
+  default in spun-off projects.
+- **Tests** — `tests/dotnetskills.Tests/` xUnit v3 on MTP; smoke tests on
+  `Listing` + its data annotations. `dotnet test` green.
+- **Localization** — `AddLocalization` + `UseRequestLocalization` (`en` default,
+  `de`), `IStringLocalizer<SharedResource>`, `CultureSelector` in the app bar →
+  `GET /culture/set` cookie + `LocalRedirect`. Nav + `Home` localized.
+- **Auth** — ASP.NET Core Identity, `ApplicationUser`, Identity tables in
+  `AppDbContext`; Register/Login/Logout/Manage pages under `Components/Account/`
+  verified end-to-end against Postgres (P3.1–P3.3). No roles enforced on a real
+  feature yet, no external OAuth2, no admin seed (P3.4–P3.6).
+- No background jobs, mail, cache abstraction, file storage, or app-level
+  SignalR. No app Dockerfile / container publish, no CI/CD.
+- `CLAUDE.md` — conventions, data-access, MudBlazor rules, localization, and
+  reuse sections all filled in; no `TBD` left.
 
 ## Skills / plugins available (7 plugins)
+
+All enabled from one vendored marketplace (`dotnet-agent-skills` →
+`CarlNaddy/claude-plugins-dotnet`, a frozen copy of `dotnet/skills` + the
+app-maintained `mudblazor` plugin).
 
 | Area | Skills |
 |---|---|
@@ -43,112 +101,147 @@ reasons:
 | Testing | Large `dotnet-test` suite: scaffold, generate (`code-testing-agent`), run, hot-reload, platform-detection, coverage-analysis, crap-score, test-gap-analysis, assertion-quality, test-anti-patterns, test-smell-detection, find-untested-sources, grade-tests, test-tagging, testability-obstacle / migrate-static-to-wrapper / generate-testability-wrappers, writing-mstest-tests — plus dedicated sub-agents |
 | MudBlazor | `mudblazor` |
 | Design | `frontend-design`, `design`, `dataviz`, `artifact-*` |
+| Cross-cutting workflow | `code-review`, `simplify`, `security-review`, `run`, `loop`, `schedule` |
 
-## Rails feature -> where this stack lands
+No skill covers the P4 batteries tier, deployment, a `rails console` substitute,
+or schema evolution beyond "add + update" (the repo's own
+[`docs/ef-migrations.md`](./ef-migrations.md) fills the last gap by convention).
+
+## Rails feature → where this stack lands
 
 | Rails capability | Status here |
 |---|---|
-| `rails new` (project baseline) | :x: No template — this repo is a reference app + Claude setup; GitHub template-repo is the interim, a `dotnet new` template is plan P7.2 |
-| Opinionated layout / conventions | :warning: Template only; `Conventions - TBD`, no solution or layering |
-| ActiveRecord ORM | :x: EF Core not installed |
-| Migrations, rollback, `schema.rb` | :warning: EF Core migrations exist as tooling; `create-datadriven` *uses* the lifecycle, but no skill owns schema evolution / rollback / data backfills |
-| `rails g scaffold` | :white_check_mark: `create-datadriven-aspnetcore` — once a `DbContext` exists |
+| `rails new` (project baseline) | :white_check_mark: GitHub template repo + `scripts/new-project.sh` + `scripts/update-from-template.sh`, verified (P7.1). Two steps + Git Bash instead of one command; a `dotnet new` template (P7.2) is deferred to **(vNext)**, triggered by org-wide sharing |
+| Opinionated layout / conventions | :white_check_mark: single project + concern folders, documented in `CLAUDE.md`; analyzers + `.editorconfig` enforced |
+| ActiveRecord ORM | :white_check_mark: EF Core 10 + Npgsql, `AppDbContext`, entities-are-the-model (no repository layer) |
+| Migrations, rollback, `schema.rb` | :white_check_mark: `dotnet ef` + `Data/Migrations/` + `AppDbContextModelSnapshot`; rollback / rename / backfill / squash covered in `docs/ef-migrations.md` with a worked example |
+| `rails g scaffold` | :white_check_mark: `create-datadriven-aspnetcore` + `mudblazor` — agent-driven, not a one-liner CLI, but one prompt; `Listing` is the worked pattern |
 | RESTful routing | :white_check_mark: `dotnet-webapi` for APIs; Blazor page routing stays manual `@page` |
-| Auth (Devise) | :warning: `configure-auth` skill is solid, but no Identity scaffolded, no user model |
-| Authorization (Pundit) | :warning: Covered conceptually by `configure-auth` (policies / roles) |
-| Test framework | :white_check_mark::white_check_mark: **Exceeds Rails** — coverage, mutation-gap, CRAP, anti-pattern audits, testability refactors |
-| `rails console` (REPL over app DI) | :x: No skill, no ergonomic equivalent |
-| `db/seeds.rb` | :x: Skill explicitly forbids seeding in `Program.cs`, gives no seed pattern |
-| Test factories (FactoryBot) / fixtures | :x: Strong on test *logic*, nothing on test *data* setup |
-| ActionMailer | :x: No skill, nothing wired |
-| ActiveJob + Sidekiq | :x: No skill; no MS first-party — Hangfire (recommended) / Quartz.NET |
-| ActionCable | :warning: Blazor rides SignalR internally; no skill for app-level hubs |
-| ActiveStorage (files + variants) | :warning: `minimal-api-file-upload` = ingest endpoint only, no storage abstraction |
-| Fragment / Russian-doll caching | :x: No skill for `OutputCache` / `HybridCache` / response caching |
-| i18n / localization | :warning: `IStringLocalizer` is built-in; needs wiring — promoted to plan P0.7 |
-| Environments (dev/test/prod) | :white_check_mark: Native ASP.NET config |
-| Asset pipeline | :white_check_mark: Handled by Blazor static assets + MudBlazor |
-| Deploy (Kamal / Heroku one-liner) | :x: No Dockerfile, no containerize/deploy skill |
+| `db/seeds.rb` | :white_check_mark: `dotnet run -- seed` — explicit verb, migrates first, idempotent |
+| Environments (dev/test/prod) | :white_check_mark: native ASP.NET config |
+| Asset pipeline | :white_check_mark: Blazor static assets + MudBlazor |
+| i18n / localization | :white_check_mark: `IStringLocalizer` wired (`en`/`de`), cookie-persisted culture selector (P0.7) |
+| Test framework | :white_check_mark::white_check_mark: **exceeds Rails** — coverage, mutation-gap, CRAP, anti-pattern / smell audits, testability refactors, per-test grading |
+| Auth (Devise) | :white_check_mark: Identity wired, EF stores, Register/Login/Logout/Manage pages verified end-to-end (P3.1–P3.3). Roles/policies on a real page, OAuth2, admin seed still open (P3.4–P3.6) |
+| Authorization (Pundit) | :x: covered conceptually by `configure-auth`; nothing wired |
+| Test factories (FactoryBot) / fixtures | :x: strong on test *logic*, nothing on test *data* — no builders, no `Bogus` (P2.2) |
+| EF Core test approach | :x: no shared `DbContext` fixture, no Testcontainers / in-memory decision (P2.3) |
+| Component tests | :x: no `bUnit` (P2.4) |
+| `rails console` (REPL over app DI) | :x: no skill, no ergonomic equivalent (P6.2) |
+| ActionMailer | :x: no skill, nothing wired (P4.2) |
+| ActiveJob + Sidekiq | :x: no skill; no MS first-party — Hangfire (recommended) / Quartz.NET (P4.1) |
+| ActionCable | :warning: Blazor rides SignalR internally; no skill / pattern for app-level hubs (P4.5) |
+| ActiveStorage (files + variants) | :warning: `minimal-api-file-upload` = ingest endpoint only, no storage abstraction (P4.4) |
+| Fragment / Russian-doll caching | :x: no wiring for `OutputCache` / `HybridCache` / rate limiting (P4.3) |
+| Deploy (Kamal / Heroku one-liner) | :x: no app container / publish target, no full-stack `compose.yaml`, no CI/CD (P5) |
 | Admin panel (ActiveAdmin) | :warning: `MudDataGrid` + `create-datadriven` gets you there by generation |
+| Observability | :warning: built-in `ILogger` now; health checks + OpenTelemetry deferred (P4.6 / vNext) |
+
+## Scorecard against the plan's 8-point "parity" definition
+
+| # | Capability | Status |
+|---|---|---|
+| 1 | Model + reversible migrations | ✅ at parity |
+| 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
+| 3 | One-command seed on fresh clone | ✅ at parity |
+| 4 | Authenticate & authorize users | 🟡 register/login/logout/manage work end-to-end (P3.1–P3.3); OAuth2 + role-gated feature + admin seed open (P3.4–P3.6) |
+| 5 | Jobs / email / cache / file storage / real-time | ❌ not started (P4) |
+| 6 | Model + integration + component tests, reusable test data | 🟡 test project runs; builders / EF fixture / bUnit / coverage baseline open |
+| 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
+| 8 | Start a new project from the baseline in one step | ✅ template-repo + script route verified (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
 
 ## What's missing, in priority order
 
-### Blocking Rails-parity for the core loop
+### Finish testing (P2.2–P2.5) — small, unblocks confident iteration
 
-1. **Wire EF Core** — pick a provider (Postgres / SQLite), add
-   `Microsoft.EntityFrameworkCore.*` + `.Design`, create a `DbContext`, add a
-   connection string, add `.config/dotnet-tools.json` with `dotnet-ef`. Until this
-   exists, `create-datadriven-aspnetcore` and `optimizing-ef-core-queries` have
-   nothing to act on.
-2. **A migrations workflow doc / skill** — the current data skill only does "add
-   InitialCreate + update". Rails devs lean hard on rollback, renames, backfills,
-   and squashing; that guidance does not exist here. Write a repo convention in
-   `CLAUDE.md`.
-3. **A seed strategy** — `IHostEnvironment`-gated seeding or a `dotnet run seed`
-   command; needs deciding since the skill bans the obvious spot.
-4. **Test project** — `dotnet-test:scaffold-dotnet-test-project` will do it in one
-   shot, but it has not been run; plus a factory / builder convention for test data.
+- Test-data builders / object-mother + `Bogus` (FactoryBot analog).
+- EF Core test approach: shared fixture / base class; SQLite-in-memory vs
+  Testcontainers decision.
+- `bUnit` for component render + interaction tests.
+- Coverage baseline + Cobertura report in CI.
 
-### Batteries with no coverage (each = add a library + write a short skill / convention)
+### Finish auth (P3.4–P3.6) — the core is done
 
-5. **Background jobs** — Hangfire (recommended) or Quartz.NET. Microsoft ships no
-   first-party job framework. (No .NET Aspire — orchestration tooling aimed at
-   multi-service apps, overkill for a monolith.)
-6. **Email** — MailKit + Razor-templated messages.
-7. **Output / Hybrid caching + rate limiting** conventions.
-8. **App-level SignalR hubs** (if chat / notifications are needed beyond Blazor's
-   built-in circuit).
-9. **File storage abstraction** (local <-> Azure Blob / S3).
-10. **Deployment** — Dockerfile + `dotnet publish` container target, plus a deploy
-    target choice.
+Identity + EF stores + migration + register/login/logout/manage pages are done
+and verified (P3.1–P3.3). Remaining: external OAuth2 (Google / Microsoft
+first-party, GitHub via `AspNet.Security.OAuth.GitHub`); policies / roles
+enforced on an actual protected feature, not just the render-mode plumbing;
+seed an admin user in `DbSeeder`. The `configure-auth` skill covers the design;
+this is a focused build-out.
 
-### Lower stakes
+### Batteries (P4) — the structural gap, net-new, document as you go
 
-- ~~i18n / localization~~ — **promoted** to a foundational task (plan P0.7).
-- A `rails console` substitute (`dotnet run -- <verb>` one-off commands, or a C#
-  script host).
-- Auth pages actually scaffolded via `configure-auth`.
+Each item = choose a library + wire a thin app-owned seam + write a `docs/`
+convention. No skill assists.
+
+5. Background jobs — **Hangfire** (persistent queue + dashboard, Sidekiq-closest)
+   or Quartz.NET; store jobs in the app Postgres DB.
+6. Email — **MailKit** + Razor-templated bodies; dev sink (smtp4dev / Papercut).
+7. Caching + rate limiting — first-party `HybridCache` / `OutputCache` +
+   `AddRateLimiter`. Redis backplane is vNext (triggered by >1 instance).
+8. File storage — `IFileStore` abstraction, local disk now, blob later.
+9. Real-time — app-level SignalR hub, only if a feature needs it.
+
+### Deployment (P5) — standard MS guidance, no skill
+
+Container image via `dotnet publish -t:PublishContainer`; full-stack
+`compose.yaml` (app + Postgres + mail sink); GitHub Actions restore → build →
+test → publish → deploy to one target; production hardening (persisted Data
+Protection keys, `/health` + `/alive`).
+
+### Lower stakes (P6)
+
+- `rails console` substitute — a DI-wired `dotnet run -- <verb>` host.
+- `.http` request collections per API area.
+
+### Deferred (vNext)
+
+- **P7.2** — real `dotnet new` custom template with `--sample` / `--db`
+  parameters. The P7.1 scripts already produce a building project from the
+  baseline and add a forward-sync path (`update-from-template.sh`) that a
+  `dotnet new` template cannot; the remaining gap is one-command ergonomics and
+  `dotnet new list` / NuGet distribution. Pick up when a second team or org-wide
+  sharing appears. Known limitation until then: the scripts require bash (Git
+  Bash on Windows).
 
 ## Bottom line
 
-The **UI + testing story is excellent** — better than what a Rails dev gets from AI
-tooling — and the API / CRUD story is competent and one EF Core setup away from
-usable. The gap to "as productive as Rails" is:
+For **building a UI-over-data feature**, this stack is now genuinely at Rails
+productivity and ahead of it on testing and type safety. **Starting a new project
+from the baseline is settled** — the P7.1 script route is the accepted answer;
+a one-command `dotnet new` template stays deferred until org-wide sharing makes
+it worth the maintenance. The distance to **"clone it and ship a real product"**
+is the rest of P3 plus P4–P5: auth's roles/OAuth2/admin-seed tail (P3.4–P3.6),
+the batteries tier (net-new, five libraries behind seams), and a deploy pipeline
+(standard, unskilled). Roughly
+**half the plan by volume remains**, and the batteries half is the part where the
+goal is parity of *documentation and convention* with Rails — not the effortless
+"it's already wired" that Rails and its AI tooling will always have there.
 
-1. **Finish the data layer** (EF Core + Postgres provider + `DbContext` +
-   migrations tooling).
-2. Add the batteries as isolated, Microsoft-standard-first pieces: Hangfire
-   (jobs) and MailKit (email) behind thin seams; built-in `HybridCache` +
-   `AddRateLimiter` for caching / throttling; local infra via a plain
-   `compose.yaml`. **No .NET Aspire.**
-
-Neither the framework nor the skills will hand you jobs / mail / cache / deploy the
-way Rails hands you ActiveJob / ActionMailer / Kamal — those stay decisions to make
-and document in `CLAUDE.md`. See `rails-parity-plan.md` for the sequenced tasks;
-the scoping decisions that shaped it are below.
-
-## Scoping decisions (2026-08-31 review)
+## Scoping decisions (carried forward from the 2026-08-31 review)
 
 - **Monolith-first, Microsoft-standard-first.** Official .NET / ASP.NET Core
   patterns, templates, and the installed `dotnet*` skills take priority over
-  third-party or bespoke solutions — they are the most robust path and the AI
-  agents are trained on them, so agentic development stays smooth. Third-party
-  only where there is no first-party option (jobs → Hangfire, email → MailKit),
-  kept behind a thin seam. Feature modules / light DDD inside the one project are
-  fine.
-- **Solution file de-scoped** — work against `dotnetskills.csproj` directly until
-  a test project makes a `.slnx` worthwhile (plan P2.1).
-- **Drop .NET Aspire** everywhere it appeared (data, jobs, deploy).
+  third-party or bespoke solutions — most robust path, and the AI agents are
+  trained on them. Third-party only where there is no first-party option (jobs →
+  Hangfire, email → MailKit), kept behind a thin seam. Feature modules / light
+  DDD inside the one project are fine.
+- **PostgreSQL + Npgsql in every environment** — no SQLite-in-dev split, so
+  migration SQL never diverges from prod.
+- **Drop .NET Aspire** everywhere it appeared (data, jobs, deploy) — orchestration
+  tooling aimed at multi-service apps, overkill for a monolith.
 - **Redis** (distributed cache / SignalR backplane / DP key store) → **vNext**,
   triggered by running more than one instance.
 - **Full OpenTelemetry** → **vNext**; `ILogger` + health checks cover the
   near-term need.
-- **External OAuth2 login** (Google / GitHub / Microsoft) added to the auth phase.
-- **Localization promoted** from "lower stakes" to a foundational task (plan
-  P0.7) — cheaper to wire in before UI text accumulates.
+- **External OAuth2 login** (Google / GitHub / Microsoft) is part of the auth
+  phase.
+- **Localization promoted** to a foundational task (P0.7) — done.
 - **Deployment follows official MS container guidance** (SDK container publish or
   the standard `Dockerfile`, plus `compose.yaml`) — no custom tooling.
 - **Reuse model:** the app is a worked reference, not the deliverable. The
   reusable parts are `.claude/settings.json` (plugins/skills), the `CLAUDE.md`
-  conventions, and `docs/`. New projects: GitHub template-repo now (plan P7.1),
-  a `dotnet new` template as the target (P7.2 = the `rails new` analog).
+  conventions, and `docs/`. New projects go through the GitHub template-repo +
+  `scripts/` route (P7.1, done) — **this is the accepted answer for P7**. A
+  `dotnet new` template (P7.2) is deferred to (vNext); it would not replace
+  `update-from-template.sh`, so the scripts stay either way.

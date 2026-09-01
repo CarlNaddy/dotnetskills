@@ -10,3 +10,33 @@
     .blazor-error-boundary::after {
         content: "An error has occurred."
     }
+
+/* Identity pages (Components/Account/) use native Blazor inputs (InputText /
+   InputCheckbox), not MudTextField/MudCheckBox — see CLAUDE.md "Authentication
+   & authorization". MudBlazor's inputs bind via interactive JS/event wiring
+   and render no `name` attribute, so they can't take part in the native form
+   POST a static-SSR EditForm needs. This is the one deliberate exception to
+   "all UI is MudBlazor" and is scoped to these pages via the .account-* classes. */
+.account-input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border: 1px solid var(--mud-palette-lines-inputs, rgba(0, 0, 0, 0.42));
+    border-radius: 4px;
+    font: inherit;
+    background: var(--mud-palette-surface, #fff);
+    color: var(--mud-palette-text-primary, inherit);
+}
+
+.account-input:focus {
+    outline: 2px solid var(--mud-palette-primary, #594AE2);
+    outline-offset: -1px;
+}
+
+.account-validation {
+    display: block;
+    color: var(--mud-palette-error, #d32f2f);
+    font-size: 0.75rem;
+    margin-bottom: 0.75rem;
+}

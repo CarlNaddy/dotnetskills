@@ -1,18 +1,23 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace dotnetskills.Data;
 
 /// <summary>
-/// The application's Entity Framework Core context. Entities are added to it as
-/// features land.
+/// The application's Entity Framework Core context. Also the ASP.NET Core
+/// Identity store (parity plan P3.2) — one database, one context, one migration
+/// history. Entities are added to it as features land.
 /// </summary>
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options)
+    : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Listing> Listings => Set<Listing>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        modelBuilder.Entity<Listing>(listing =>
+        base.OnModelCreating(builder);
+
+        builder.Entity<Listing>(listing =>
         {
             listing.Property(l => l.Status)
                 .HasConversion<string>()

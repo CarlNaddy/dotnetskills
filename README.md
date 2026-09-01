@@ -61,10 +61,26 @@ tests) but no domain code, like `rails new`.
 5. Make `CLAUDE.md` yours.
 6. Open the repo in Claude Code and accept the marketplace-trust prompts —
    `.claude/settings.json` carries the `dotnet*` / `mudblazor` plugins over.
+   Verify with `bash scripts/check-plugins.sh` (`--fix` installs any missing).
 7. `git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md`,
-   then commit.
+   then commit. Keep `scripts/update-from-template.sh`, `docs/updating-from-template.md`
+   and `.template-version` — they let you pull later template changes.
 
 **Full step-by-step (verified end to end): [`docs/new-project.md`](docs/new-project.md).**
+
+## Pull later template changes into your project
+
+`new-project.sh` records the template commit you started from in
+`.template-version`. To bring in template fixes and updates afterwards:
+
+```bash
+bash scripts/update-from-template.sh --dry-run   # preview commits + affected files
+bash scripts/update-from-template.sh             # rewrite the identifier, 3-way apply
+```
+
+It never touches files you own (`README.md`, `CLAUDE.md`, `compose.yaml`, …) —
+those are listed for manual reconciliation. Details, including how to resolve
+rejects: [`docs/updating-from-template.md`](docs/updating-from-template.md).
 
 ## Build your features spec-first (optional)
 

@@ -43,7 +43,8 @@ echo "==> Replacing identifier '$OLD' -> '$NEW' in tracked text files"
 git ls-files -z \
     | grep -zvE '(^|/)(bin|obj)/' \
     | grep -zvE '\.(png|jpe?g|gif|ico|woff2?|ttf|eot)$' \
-    | grep -zvE '(^|/)scripts/new-project\.sh$' \
+    | grep -zvE '(^|/)(scripts/new-project|scripts/update-from-template)\.sh$' \
+    | grep -zvE '(^|/)docs/updating-from-template\.md$' \
     | xargs -0 sed -i "s/${OLD}/${NEW}/g"
 
 echo "==> Renaming files/directories that contain '$OLD'"
@@ -104,6 +105,30 @@ git rm -qf --ignore-unmatch \
     docs/rails-parity-assessment.md \
     docs/setup-log.md
 
+echo "==> Recording template baseline (.template-version)"
+# scripts/update-from-template.sh diffs the template from this commit forward.
+# HEAD is still the pristine template tree here (nothing has been committed yet),
+# so its tree hash matches the template commit we were created from.
+git remote get-url template >/dev/null 2>&1 \
+    || git remote add template "https://github.com/CarlNaddy/${OLD}.git"
+base=""
+if git fetch -q template 2>/dev/null; then
+    head_tree="$(git rev-parse 'HEAD^{tree}')"
+    while IFS= read -r c; do
+        if [ "$(git rev-parse "${c}^{tree}")" = "$head_tree" ]; then base="$c"; break; fi
+    done < <(git rev-list template/main)
+fi
+if [ -n "$base" ]; then
+    printf '%s\n' "$base" > .template-version
+    echo "    baseline: $base"
+else
+    printf 'UNKNOWN\n' > .template-version
+    echo "    could not detect the baseline (offline, or no tree match)."
+    echo "    Set .template-version to the commit you started from before running"
+    echo "    scripts/update-from-template.sh  (git log --oneline template/main)."
+fi
+git add .template-version 2>/dev/null || true
+
 if [ "$with_sample" = 0 ]; then
     echo
     "$ROOT/scripts/remove-sample.sh"
@@ -122,10 +147,20 @@ Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample
          "Host=localhost;Port=5432;Database=<db>;Username=<user>;Password=<pw>"
   4. docker compose up -d db && dotnet tool restore
   5. dotnet format ${NEW}.slnx && dotnet build && dotnet test
-  6. (optional) spec-driven development:  bash scripts/setup-openspec.sh
+  6. AI tooling — open the repo in Claude Code and accept the marketplace-trust
+     prompts (.claude/settings.json installs the dotnet* / mudblazor plugins).
+     Verify:  bash scripts/check-plugins.sh   (add --fix to install headlessly)
+  7. (optional) spec-driven development:  bash scripts/setup-openspec.sh
        then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
-  7. Remove the templating helpers you no longer need:
+  8. Remove the templating helpers you no longer need:
        git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md
-     (keep scripts/preflight.sh, scripts/setup-openspec.sh, docs/ef-migrations.md.)
-  8. git add -A && git commit -m "Initialize from template"
+     Keep: scripts/preflight.sh, scripts/check-plugins.sh, scripts/setup-openspec.sh,
+     docs/ef-migrations.md, and — to pull future template updates —
+     scripts/update-from-template.sh, docs/updating-from-template.md, .template-version.
+  9. git add -A && git commit -m "Initialize from template"
+
+Later, to pull template changes into this project:
+     bash scripts/update-from-template.sh --dry-run   # preview
+     bash scripts/update-from-template.sh             # apply
+   See docs/updating-from-template.md.
 EOF

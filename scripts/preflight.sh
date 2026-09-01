@@ -54,6 +54,18 @@ else
     warn "node/npm not found — only needed for scripts/setup-openspec.sh"
 fi
 
+echo "Optional — Claude Code AI tooling:"
+here="$(dirname "$0")"
+if [ ! -f "$here/../.claude/settings.json" ]; then
+    warn ".claude/settings.json not found — AI tooling config missing"
+elif ! command -v claude >/dev/null 2>&1; then
+    warn "'claude' CLI not on PATH — open the repo in Claude Code to install plugins"
+elif "$here/check-plugins.sh" >/dev/null 2>&1; then
+    ok "Claude Code plugins installed and enabled"
+else
+    warn "some Claude Code plugins missing — run scripts/check-plugins.sh [--fix]"
+fi
+
 echo
 if [ "$fail" = 1 ]; then
     echo "Preflight failed. Install the tools marked FAIL, then re-run." >&2

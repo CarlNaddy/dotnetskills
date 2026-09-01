@@ -67,6 +67,10 @@ declares two marketplaces and enables their plugins:
 `dotnet-agent-skills` and `mudblazor-agent-skills` marketplaces. The plugins
 listed under `enabledPlugins` install automatically. No plugin content is
 committed — it is cached under `~/.claude/plugins/` and re-fetched from GitHub.
+Run `bash scripts/check-plugins.sh` to confirm every expected marketplace and
+plugin is installed and enabled (`--fix` registers the marketplaces and installs
+any that are missing, for headless / CI setups). `scripts/preflight.sh` also
+reports this.
 Keep `.claude/settings.json` to project config only; personal prefs (`theme`,
 etc.) belong in your user `~/.claude/settings.json`.
 
@@ -257,3 +261,10 @@ then the manual follow-up. Full walkthrough, verified end-to-end:
 script deletes them. `docs/ef-migrations.md` is kept (its conventions apply to
 any project). `scripts/new-project.sh` and `docs/new-project.md` are removed by
 hand once the new project is set up.
+
+`new-project.sh` records the template commit it branched from in
+`.template-version`; a spun-off project pulls later template changes with
+`bash scripts/update-from-template.sh` (diffs the template forward from that
+baseline, rewrites the `dotnetskills` identifier in the diff, 3-way applies;
+never touches `README.md` / `CLAUDE.md` / `compose.yaml`). See
+[`docs/updating-from-template.md`](docs/updating-from-template.md).

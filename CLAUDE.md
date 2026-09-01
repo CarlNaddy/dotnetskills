@@ -15,7 +15,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Render mode | Interactive Server, global (`@rendermode="InteractiveServer"` on `Routes` + `HeadOutlet` in `App.razor`) |
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
 | Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
-| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages + `Listing` policy/role authorization done (parity plan P3.1–P3.3, P3.5); external OAuth2 (P3.4) + admin seed (P3.6) next |
+| Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages, `Listing` policy/role authorization, dev admin seed done (parity plan P3.1–P3.3, P3.5–P3.6); external OAuth2 (P3.4) next |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -51,7 +51,10 @@ never diverge from production. Decided in parity plan P1.1; wiring starts at P1.
   first). Workflow, naming, rename/backfill gotchas, rollback, squashing, and
   the CI/deploy story are in [`docs/ef-migrations.md`](docs/ef-migrations.md).
 - **Seeding:** `dotnet run -- seed` — applies pending migrations, then inserts
-  sample data if the DB is empty (idempotent). Fresh clone → one command.
+  sample data if the DB is empty and the `Admin` role + a dev admin user if
+  missing (all idempotent). Fresh clone → one command. Sample data lives in
+  `Data/Seed/DbSeeder.cs`; the admin user in `Data/Seed/IdentitySeeder.cs` (see
+  the auth section for credentials).
 - Entities are the model — query `DbContext` directly, no repository layer.
 
 ## Authentication & authorization
@@ -60,7 +63,8 @@ never diverge from production. Decided in parity plan P1.1; wiring starts at P1.
 username/password model (the Devise analog), cookie authentication, roles
 enabled. Decided in parity plan **P3.1**; Identity + stores + the `AddIdentity`
 migration wired in **P3.2**; Register/Login/Logout/Manage pages in **P3.3**;
-policy/role authorization on the `Listing` feature in **P3.5**.
+policy/role authorization on the `Listing` feature in **P3.5**; dev admin seed
+in **P3.6**.
 Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
 
 - **User entity:** `ApplicationUser : IdentityUser` under `Data/` (one type per
@@ -85,8 +89,13 @@ Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
   = "…")]` protects the *page*; `<AuthorizeView Policy="…">` hides the *button*;
   a delete handler also re-checks the role in code
   (`Components/AuthStateExtensions.cs` → `AuthState.IsInRoleAsync("Admin")`) —
-  the button being hidden is not a security boundary. The `Admin` role is
-  seeded in P3.6.
+  the button being hidden is not a security boundary.
+- **Admin seed (P3.6):** `dotnet run -- seed` also runs
+  `Data/Seed/IdentitySeeder.cs` — creates the `Admin` role and a dev admin user
+  if missing (idempotent). Credentials from config keys `Seed:AdminEmail` /
+  `Seed:AdminPassword`; the dev default is `admin@dotnetskills.local` /
+  `Admin!23456`. Outside Development a `Seed:AdminPassword` **must** be supplied
+  — the seeder throws rather than use the built-in default.
 - **Identity UI:** hand-authored Razor pages under `Components/Account/`
   (`Pages/Register.razor`, `Pages/Login.razor`, `Pages/Manage/Index.razor`).
   The stock Identity UI Razor Class Library ships Bootstrap markup and is

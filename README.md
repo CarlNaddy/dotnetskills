@@ -108,10 +108,15 @@ Implement the feature itself with the bundled skills — e.g. CRUD via
 ```bash
 docker compose up -d db
 dotnet tool restore
-dotnet run -- seed
+dotnet run -- seed   # migrations + sample listings + a dev admin user
 dotnet watch run
 dotnet test
 ```
+
+`dotnet run -- seed` also creates the `Admin` role and a dev admin —
+`admin@dotnetskills.local` / `Admin!23456` (override with the `Seed:AdminEmail`
+and `Seed:AdminPassword` config keys; a password is required outside
+Development).
 
 ## Conventions & AI tooling
 

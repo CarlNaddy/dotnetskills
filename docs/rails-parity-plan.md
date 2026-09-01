@@ -449,8 +449,23 @@ test-*data* convention.
   HTML carries 0 write controls. Registered a plain user → "New listing" + 5
   Edit icons appear, 0 Delete icons. Granted that user the `Admin` role +
   re-login → 5 Delete icons appear. Clean build, `dotnet test` 3/3.
-- [ ] **P3.6** Seed an admin user in the P1.7 seeder. _Skill:_ — · _Accept:_ known
+- [x] **P3.6** Seed an admin user in the P1.7 seeder. _Skill:_ — · _Accept:_ known
   dev admin credentials.
+  _Done:_ `Data/Seed/IdentitySeeder.cs` — creates the `Admin` role and a dev
+  admin user if missing, assigns the role; idempotent. `SeedCommand` resolves
+  `UserManager` / `RoleManager` / `IConfiguration` / `IHostEnvironment` from the
+  scope and runs it after `DbSeeder`. Credentials: config keys `Seed:AdminEmail`
+  / `Seed:AdminPassword`, dev default `admin@dotnetskills.local` / `Admin!23456`;
+  **outside Development a `Seed:AdminPassword` is required** or the seeder
+  throws. README + `CLAUDE.md` updated. Verified: `dotnet run -- seed` on a DB
+  with listings but no identity rows → role + user created, role assigned
+  (`EmailConfirmed = true`, `role = Admin` in `psql`); re-runs log "Admin user
+  … already present" with no duplicate and no password warning. Clean build,
+  `dotnet test` 3/3.
+  _Follow-up (not P3.6):_ `scripts/remove-sample.sh` still rewrites
+  `AppDbContext` back to a plain `DbContext` and deletes `Data/Seed/` — that now
+  strips the Identity wiring too. The skeleton path needs reworking when the
+  `dotnet new` template (P7.2) is picked up.
 
 ### P4 — Batteries (no skill exists — net-new, document as you go)
 

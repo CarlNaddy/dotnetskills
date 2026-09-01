@@ -371,9 +371,19 @@ test-*data* convention.
   `NuGetAuditSuppress` in the test `.csproj`. Doc:
   [`docs/testing-database.md`](testing-database.md); `CLAUDE.md` Tests section
   points at it. `dotnet test` → 13/13 (Docker up), clean build with analyzers.
-- [ ] **P2.4** Blazor component tests with `bUnit`. _Skill:_ `author-component`
+- [x] **P2.4** Blazor component tests with `bUnit`. _Skill:_ `author-component`
   (context) + `code-testing-agent` · _Accept:_ one render + interaction test
   passing.
+  _Done:_ `bunit` 2.9.0 (CPM) — the v2 line is one framework-agnostic package, so
+  it coexists with xUnit v3 (no `bunit.xunit` / xUnit v2 pull). `Infrastructure/
+  MudBlazorTestContext : BunitContext` registers `AddMudServices()` and sets
+  `JSInterop.Mode = Loose`. `Components/DeleteListingDialogTests.cs` — 2 tests
+  against the real `DeleteListingDialog`: renders the listing title into the
+  prompt, and clicking **Delete** closes the dialog with
+  `DialogResult` `Canceled == false` / `Data == true` (render + interaction +
+  result assertion, via a `MudDialogProvider` in the test tree). `CLAUDE.md`
+  Tests section documents the pattern. `dotnet test` → 15/15, clean build with
+  analyzers.
 - [ ] **P2.5** Coverage baseline + CI report. _Skill:_ `coverage-analysis`,
   `run-tests` · _Accept:_ Cobertura report produced in CI; baseline recorded.
 

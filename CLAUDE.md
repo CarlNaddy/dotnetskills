@@ -380,6 +380,14 @@ project.
   `ResetAsync`, `Ct` token). `ListingPersistenceTests` is the worked example.
   **These tests need Docker running.** Details:
   [`docs/testing-database.md`](docs/testing-database.md).
+- **Component tests (P2.4):** `bunit` 2.x (framework-agnostic, works with xUnit
+  v3). Derive from `Infrastructure/MudBlazorTestContext` — it registers
+  `AddMudServices()` and sets `JSInterop.Mode = Loose` so menus / dialogs /
+  popovers render without a browser; a component that opens one still needs its
+  provider (`MudDialogProvider`, `MudPopoverProvider`) rendered in the test tree.
+  Re-query after every interaction, prefer `ClickAsync` / `ChangeAsync`, assert
+  semantically. `Components/DeleteListingDialogTests` is the worked example
+  (render + click → `DialogResult`).
 
 ## Reuse — starting a new project
 

@@ -17,6 +17,7 @@
     </PackageReference>
     <PackageReference Include="Bogus" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="bunit" />
   </ItemGroup>
 
   <ItemGroup>

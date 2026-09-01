@@ -384,8 +384,19 @@ test-*data* convention.
   result assertion, via a `MudDialogProvider` in the test tree). `CLAUDE.md`
   Tests section documents the pattern. `dotnet test` → 15/15, clean build with
   analyzers.
-- [ ] **P2.5** Coverage baseline + CI report. _Skill:_ `coverage-analysis`,
+- [x] **P2.5** Coverage baseline + CI report. _Skill:_ `coverage-analysis`,
   `run-tests` · _Accept:_ Cobertura report produced in CI; baseline recorded.
+  _Done:_ MTP-native coverage via `Microsoft.Testing.Extensions.CodeCoverage`
+  18.10.0 (CPM) — `dotnet test -c Release -- --coverage --coverage-output-format
+  cobertura`. First CI pipeline for the repo: `.github/workflows/ci.yml`
+  (`ubuntu-latest`, `push` to `main` + `pull_request`) runs restore → build →
+  test-with-coverage; Docker is preinstalled so the P2.3 Testcontainers tests run
+  unchanged. A lines/branches table is written to `$GITHUB_STEP_SUMMARY` (inline
+  `python3` cobertura parse — no third-party action) and the raw
+  `coverage.cobertura.xml` uploaded as an artifact. **Baseline (2026-09-01):**
+  lines 917/1382 = 66.4%, branches 90/246 = 36.6% (whole-assembly, incl.
+  migrations). Doc: [`docs/testing-coverage.md`](testing-coverage.md); `CLAUDE.md`
+  Tests section points at it. Full deploy pipeline stays P5.3.
 
 ### P3 — Authentication & authorization
 

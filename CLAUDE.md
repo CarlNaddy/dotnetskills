@@ -388,6 +388,11 @@ project.
   Re-query after every interaction, prefer `ClickAsync` / `ChangeAsync`, assert
   semantically. `Components/DeleteListingDialogTests` is the worked example
   (render + click → `DialogResult`).
+- **Coverage (P2.5):** MTP-native via `Microsoft.Testing.Extensions.CodeCoverage`
+  — `dotnet test -c Release -- --coverage --coverage-output-format cobertura`.
+  `.github/workflows/ci.yml` runs restore → build → test-with-coverage on push to
+  `main` + PRs, writes a summary, uploads the Cobertura file. Baseline and how to
+  read it: [`docs/testing-coverage.md`](docs/testing-coverage.md).
 
 ## Reuse — starting a new project
 

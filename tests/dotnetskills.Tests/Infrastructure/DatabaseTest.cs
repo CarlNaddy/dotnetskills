@@ -1,4 +1,5 @@
 using dotnetskills.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace dotnetskills.Tests.Infrastructure;
 
@@ -16,11 +17,20 @@ public abstract class DatabaseTest(PostgresFixture fixture) : IAsyncLifetime
 
     protected AppDbContext CreateContext() => fixture.CreateContext();
 
+    /// <summary>An <see cref="IDbContextFactory{TContext}"/> over the same connection —
+    /// for constructing app services that take a context factory (e.g. background jobs).</summary>
+    protected IDbContextFactory<AppDbContext> CreateDbContextFactory() => new ContextFactory(fixture);
+
     public async ValueTask InitializeAsync() => await fixture.ResetAsync();
 
     public ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
+    }
+
+    private sealed class ContextFactory(PostgresFixture fixture) : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext() => fixture.CreateContext();
     }
 }

@@ -16,6 +16,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | UI library | MudBlazor (replaces the template's default Bootstrap) |
 | Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
 | Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages, `Listing` policy/role authorization, dev admin seed, external OAuth2 (Google/Microsoft/GitHub) all done (parity plan P3.1–P3.6) |
+| Background jobs | Hangfire, storage in the app's own PostgreSQL (own `hangfire` schema, not an EF Core migration); `/hangfire` dashboard gated to the `Admin` role (parity plan P4.1) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -155,6 +156,35 @@ Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
     Google just works" behaviour.
 - **Seeding:** a known dev admin user + the `Admin` role are seeded by
   `Data/Seed/IdentitySeeder.cs` (P3.6), idempotent like the rest of the seed.
+
+## Background jobs
+
+**Hangfire** — no first-party ASP.NET Core job framework exists, so this is
+net-new (parity plan **P4.1**). Storage is the app's own PostgreSQL, no
+separate infra; `Hangfire.PostgreSql` creates and manages its own `hangfire`
+schema itself on every startup — **not** an EF Core migration, `Data/Migrations/`
+never touches it. Decisions, the worked pattern, and how to add a new job:
+[`docs/background-jobs.md`](docs/background-jobs.md).
+
+- `Program.cs`: `AddHangfire(...).UsePostgreSqlStorage(...)` + `AddHangfireServer()`
+  (a hosted service — starts on `app.Run()`, never during `dotnet run -- seed`).
+  `MapHangfireDashboard("/hangfire", ...)` gated to the `Admin` role via
+  `Features/Jobs/HangfireDashboardAuthorizationFilter.cs` — the dashboard shows
+  job payloads and lets you trigger/delete jobs, so it's not public.
+- **The worked pattern:** `Features/Jobs/ListingJobs.cs` — a plain class,
+  constructor-injected per invocation (`IDbContextFactory<AppDbContext>`, not a
+  scoped `AppDbContext`), enqueued/scheduled **by method reference**, not a
+  lambda closing over local state. One fire-and-forget job
+  (`RecordListingCreatedAsync`, enqueued from `ListingCreate.razor` after a
+  successful save) and one recurring job (`RecordDailyListingCountAsync`,
+  registered via `IRecurringJobManager.AddOrUpdate` at startup, daily).
+- `Data/JobRun.cs` is the app-level "a job did X" audit row — Hangfire's own
+  storage tracks execution state but prunes succeeded-job history, so it isn't
+  a substitute for an actual audit trail.
+- **Testing:** job bodies are ordinary `AppDbContext` consumers — test them the
+  P2.3 way, against real Postgres via `DatabaseTest`
+  (`tests/dotnetskills.Tests/Features/Jobs/ListingJobsTests.cs` is the worked
+  example). Don't test Hangfire's own scheduling/dispatch.
 
 ## Claude Code plugins & skills
 

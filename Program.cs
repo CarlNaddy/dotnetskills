@@ -3,6 +3,9 @@ using dotnetskills.Components.Account;
 using dotnetskills.Data;
 using dotnetskills.Data.Seed;
 using dotnetskills.Endpoints;
+using dotnetskills.Features.Jobs;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -100,6 +103,18 @@ builder.Services.AddIdentityCore<ApplicationUser>()
 // Components/Account/IdentityRedirectManager.cs.
 builder.Services.AddScoped<IdentityRedirectManager>();
 
+// Background jobs (parity plan P4.1) — Hangfire, storage in the app's own
+// Postgres DB (own schema, managed by Hangfire itself — not an EF Core
+// migration; see docs/background-jobs.md). AddHangfireServer runs the worker
+// as a hosted service, started by app.Run() below — never during `seed`.
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+builder.Services.AddHangfireServer();
+builder.Services.AddScoped<ListingJobs>();
+
 var app = builder.Build();
 
 // `dotnet run -- seed`: apply migrations + seed sample data, then exit.
@@ -125,7 +140,22 @@ app.UseAntiforgery();
 
 app.MapCultureEndpoints();
 app.MapAccountEndpoints();
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireDashboardAuthorizationFilter()],
+});
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Recurring jobs are declarative — re-registering the same job id on every
+// startup just updates its schedule, so this is idempotent.
+using (var scope = app.Services.CreateScope())
+{
+    var recurringJobs = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    recurringJobs.AddOrUpdate<ListingJobs>(
+        "daily-listing-count",
+        job => job.RecordDailyListingCountAsync(CancellationToken.None),
+        Cron.Daily());
+}
 
 app.Run();

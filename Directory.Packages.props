@@ -1,14 +1,19 @@
 <Project>
-
   <!-- Central package management: versions live here, PackageReference in the
        .csproj files carries no Version. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Web app -->
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
+    <!-- Transitive-pin: Hangfire.PostgreSql pulls an old Hangfire.Core 1.8.0 ->
+         Newtonsoft.Json 11.0.1 chain with a known high-severity advisory
+         (GHSA-5crp-9r3c-p9vr), even though Hangfire.AspNetCore already brings a
+         patched Hangfire.Core 1.8.25. Pin Newtonsoft.Json directly. -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="MudBlazor" Version="9.9.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
@@ -20,7 +25,6 @@
          10.0.11 — pin both to one EF Core version. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
   </ItemGroup>
-
   <ItemGroup>
     <!-- Tests -->
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
@@ -30,5 +34,4 @@
     <PackageVersion Include="bunit" Version="2.9.0" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0" />
   </ItemGroup>
-
 </Project>

@@ -13,7 +13,7 @@ separate set of facts to keep in sync.
 
 ---
 
-## Status (as of 2026-09-01)
+## Status (as of 2026-09-02)
 
 **The core inner loop is at Rails parity.** A developer can define a model,
 evolve its schema through reversible migrations, scaffold a list/details/
@@ -22,13 +22,12 @@ authorize users — all without leaving the toolchain. **P0–P3 and P7 are
 complete** (see the phase checklists below for exactly what was verified and
 how). On testing and type safety the setup is **ahead of Rails**.
 
-**What's left is P4 (batteries) and P5 (deployment)** — roughly half the plan
-by volume, and the half where Rails' "it's already there" advantage is
-structural: no first-party library and no Claude Code skill covers background
-jobs, mailers, caching, file storage, real-time, or a deploy pipeline. Each P4
-item is a decide-a-library + wire-a-seam + write-a-convention exercise (see the
-P4 phase below for the chosen library per item); P5 follows standard Microsoft
-container/CI guidance.
+**P4 (batteries) is underway — P4.1 (background jobs) done; P4.2–P4.6 and P5
+(deployment) remain.** This is the half where Rails' "it's already there"
+advantage is structural: no first-party library and no Claude Code skill
+covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
+write-a-convention exercise (see the P4 phase below for the chosen library
+per item); P5 follows standard Microsoft container/CI guidance.
 
 ### Scorecard against the "parity" definition above
 
@@ -38,7 +37,7 @@ container/CI guidance.
 | 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
 | 3 | One-command seed on fresh clone | ✅ at parity |
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
-| 5 | Jobs / email / cache / file storage / real-time | ❌ not started (P4) |
+| 5 | Jobs / email / cache / file storage / real-time | 🟡 background jobs done (Hangfire, P4.1); email/cache/file-storage/real-time open (P4.2–P4.5) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
 | 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
@@ -55,7 +54,7 @@ definition, or without a direct scorecard line):
 | Component tests | ✅ `bUnit` (P2.4) |
 | `rails console` (REPL over app DI) | ❌ no skill, no ergonomic equivalent (P6.2) |
 | ActionMailer | ❌ no skill, nothing wired (P4.2) |
-| ActiveJob + Sidekiq | ❌ no MS first-party — Hangfire (recommended) / Quartz.NET (P4.1) |
+| ActiveJob + Sidekiq | ✅ Hangfire, storage in the app's own Postgres, `/hangfire` dashboard gated to `Admin` (P4.1) |
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
 | ActiveStorage (files + variants) | ⚠️ `minimal-api-file-upload` = ingest endpoint only, no storage abstraction (P4.4) |
 | Fragment / Russian-doll caching | ❌ no wiring for `OutputCache` / `HybridCache` / rate limiting (P4.3) |
@@ -593,13 +592,42 @@ test-*data* convention.
 
 ### P4 — Batteries (no skill exists — net-new, document as you go)
 
-- [ ] **P4.1** Background jobs (ActiveJob + Sidekiq analog). Microsoft ships no
+- [x] **P4.1** Background jobs (ActiveJob + Sidekiq analog). Microsoft ships no
   first-party job framework, so: **Hangfire** (recommended — persistent queue +
   dashboard, closest to the Sidekiq experience) or **Quartz.NET** (if the need is
   mostly cron scheduling). Store jobs in the app's Postgres DB (no separate
   infra). Implement one recurring + one fire-and-forget job behind a thin
   app-owned interface. _Skill:_ — · _Accept:_ scheduled job runs; enqueued job
   executes; `docs/` convention written.
+  _Done:_ **Hangfire**, storage in the app's own Postgres —
+  `Hangfire.AspNetCore` + `Hangfire.PostgreSql` (CPM; the latter's transitive
+  `Hangfire.Core 1.8.0` → `Newtonsoft.Json 11.0.1` chain had a known
+  high-severity advisory even with a patched `Hangfire.Core` already present
+  via `Hangfire.AspNetCore` — pinned `Newtonsoft.Json` 13.0.4 directly to
+  close it). Hangfire manages its own `hangfire` Postgres schema itself, not
+  an EF Core migration. `Features/Jobs/ListingJobs.cs` is the worked
+  pattern — a plain class, constructor-injected per invocation
+  (`IDbContextFactory<AppDbContext>`), enqueued/scheduled by method
+  reference: one fire-and-forget job (`RecordListingCreatedAsync`, enqueued
+  from `ListingCreate.razor` after a successful save) and one recurring job
+  (`RecordDailyListingCountAsync`, `IRecurringJobManager.AddOrUpdate` at
+  startup, daily). `Data/JobRun.cs` (+ migration) is the app-level "a job did
+  X" audit row, independent of Hangfire's own execution-history retention.
+  `/hangfire` dashboard gated to the `Admin` role via
+  `Features/Jobs/HangfireDashboardAuthorizationFilter.cs`. Convention doc:
+  [`docs/background-jobs.md`](background-jobs.md); `CLAUDE.md` has a
+  "Background jobs" section + Stack row.
+  **Verified end-to-end** against the real Docker Postgres: startup logs show
+  Hangfire's schema installing and the `BackgroundJobServer` starting clean;
+  `curl /hangfire` anonymous → 401, logged in as the seeded dev admin → 200;
+  `psql` directly into `hangfire.hash` confirms the recurring job registered
+  with cron `0 0 * * *` targeting the right method. `ListingJobsTests` (3
+  tests, Testcontainers-backed, P2.3 pattern) confirm both job bodies write
+  the expected `JobRun` row against real Postgres. `dotnet test` → 18/18,
+  clean build with analyzers. *Not exercised:* triggering a job through
+  Hangfire's own dashboard "Trigger now" — its own internal CSRF scheme,
+  separate from ASP.NET Core's antiforgery, not worth reverse-engineering
+  when the job body and the registration are already independently verified.
 - [ ] **P4.2** Email (ActionMailer analog): `MailKit` + Razor-templated bodies;
   dev sink (`smtp4dev` / Papercut / file drop). Wire the P3.3 confirmation email.
   _Skill:_ — · _Accept:_ confirmation email rendered and delivered to the dev

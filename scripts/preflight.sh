@@ -65,6 +65,11 @@ elif "$here/check-plugins.sh" >/dev/null 2>&1; then
     ok "Claude Code plugins installed and enabled"
 else
     warn "some Claude Code plugins missing — run scripts/check-plugins.sh [--fix]"
+    # Not checked here (no reliable non-interactive probe) — but the CLI needs
+    # a one-time login (or ANTHROPIC_API_KEY) before it can do anything, plugin
+    # install included, so an unauthenticated CLI looks like this too.
+    warn "  if that doesn't fix it, confirm claude is authenticated: run 'claude'"
+    warn "  once and follow the browser login, or set ANTHROPIC_API_KEY"
 fi
 
 echo

@@ -133,6 +133,24 @@ if [ "$with_sample" = 0 ]; then
     "$ROOT/scripts/remove-sample.sh"
 fi
 
+echo
+echo "==> AI tooling — installing Claude Code plugins/skills"
+# .claude/settings.json carries the dotnet*/mudblazor plugin list over unchanged
+# (no 'dotnetskills' identifier in it), so it already declares what this new
+# project needs — only the project-scoped install is still missing. Non-fatal:
+# a scripted rename this far along shouldn't abort over AI tooling.
+ai_note="run manually later:  bash scripts/check-plugins.sh --fix"
+if command -v claude >/dev/null 2>&1; then
+    if "$ROOT/scripts/check-plugins.sh" --fix; then
+        ai_note="installed and verified"
+    else
+        ai_note="install had issues — rerun:  bash scripts/check-plugins.sh --fix"
+    fi
+else
+    ai_note="'claude' CLI not on PATH — open the repo in Claude Code, or install"
+    ai_note="$ai_note the CLI and run:  bash scripts/check-plugins.sh --fix"
+fi
+
 cat <<EOF
 
 Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample removed)"). Remaining manual steps:
@@ -146,9 +164,7 @@ Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample
          "Host=localhost;Port=5432;Database=<db>;Username=<user>;Password=<pw>"
   4. docker compose up -d db && dotnet tool restore
   5. dotnet format ${NEW}.slnx && dotnet build && dotnet test
-  6. AI tooling — open the repo in Claude Code and accept the marketplace-trust
-     prompts (.claude/settings.json installs the dotnet* / mudblazor plugins).
-     Verify:  bash scripts/check-plugins.sh   (add --fix to install headlessly)
+  6. AI tooling — $ai_note
   7. (optional) spec-driven development:  bash scripts/setup-openspec.sh
        then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
   8. Remove the templating helpers you no longer need:

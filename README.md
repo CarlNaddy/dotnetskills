@@ -61,9 +61,11 @@ tests) but no domain code, like `rails new`.
    dotnet watch run           # http://localhost:5xxx  →  Home
    ```
 5. Make `CLAUDE.md` yours.
-6. Open the repo in Claude Code and accept the marketplace-trust prompts —
-   `.claude/settings.json` carries the `dotnet*` / `mudblazor` plugins over.
-   Verify with `bash scripts/check-plugins.sh` (`--fix` installs any missing).
+6. AI tooling — step 2 already ran `check-plugins.sh --fix` for you if the
+   `claude` CLI was on PATH. Confirm any time with
+   `bash scripts/check-plugins.sh`; if it wasn't available, install it and
+   rerun `--fix`, or open the repo in Claude Code and accept the
+   marketplace-trust prompt.
 7. `git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md`,
    then commit. Keep `scripts/update-from-template.sh`, `docs/updating-from-template.md`
    and `.template-version` — they let you pull later template changes.

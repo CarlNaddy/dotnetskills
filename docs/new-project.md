@@ -47,15 +47,15 @@ cd <new-repo>
 ## Step 2 — Rename (scripted)
 
 ```bash
-bash scripts/new-project.sh Acme.Portal                 # clean skeleton (recommended)
-bash scripts/new-project.sh Acme.Portal --with-sample   # keep the Listing CRUD example
+bash scripts/new-project.sh Contoso.Portal                 # clean skeleton (recommended)
+bash scripts/new-project.sh Contoso.Portal --with-sample   # keep the Listing CRUD example
 ```
 
 **Windows without Git Bash yet:**
 
 ```powershell
-powershell -File scripts/new-project.ps1 Acme.Portal
-powershell -File scripts/new-project.ps1 Acme.Portal -WithSample
+powershell -File scripts/new-project.ps1 Contoso.Portal
+powershell -File scripts/new-project.ps1 Contoso.Portal -WithSample
 ```
 
 Same script either way — `new-project.ps1` delegates to `new-project.sh` via
@@ -65,9 +65,9 @@ The working tree must be clean. The script:
 
 - replaces the `dotnetskills` identifier in every tracked text file
   (namespaces, usings, `_Imports.razor`, `.slnx`, launch profiles, …);
-- renames `dotnetskills.csproj` → `Acme.Portal.csproj`,
-  `dotnetskills.slnx` → `Acme.Portal.slnx`, and
-  `tests/dotnetskills.Tests/` → `tests/Acme.Portal.Tests/`;
+- renames `dotnetskills.csproj` → `Contoso.Portal.csproj`,
+  `dotnetskills.slnx` → `Contoso.Portal.slnx`, and
+  `tests/dotnetskills.Tests/` → `tests/Contoso.Portal.Tests/`;
 - regenerates `<UserSecretsId>`;
 - resets `README.md` to a short project stub;
 - deletes this repo's history docs (`rails-parity-plan.md`, `setup-log.md`);
@@ -91,27 +91,26 @@ taken):
 
 ```yaml
     environment:
-      POSTGRES_DB: acmeportal
-      POSTGRES_USER: acmeportal
+      POSTGRES_DB: contosoportal
+      POSTGRES_USER: contosoportal
       POSTGRES_PASSWORD: dev_only_change_me
     ports:
       - "5432:5432"
 ```
 
 Store the dev connection string in user-secrets (run in the folder with
-`Acme.Portal.csproj`):
+`Contoso.Portal.csproj`):
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:Default" \
-  "Host=localhost;Port=5432;Database=acmeportal;Username=acmeportal;Password=dev_only_change_me"
+  "Host=localhost;Port=5432;Database=contosoportal;Username=contosoportal;Password=dev_only_change_me"
 ```
 
 ## Step 4 — Bring it up
 
 ```bash
 docker compose up -d db
-dotnet tool restore                 # dotnet-ef
-dotnet format Acme.Portal.slnx      # normalise line endings from the rename
+dotnet format Contoso.Portal.slnx   # normalise line endings from the rename
 dotnet build
 dotnet test                         # xUnit v3 via MTP
 dotnet watch run                    # http://localhost:5xxx  →  Home

@@ -1,8 +1,8 @@
 # Windows entry point for scripts/new-project.sh -- turns a fresh copy of
 # this template into a new project without needing a bash shell already.
 #
-#   powershell -File scripts/new-project.ps1 Acme.Portal
-#   powershell -File scripts/new-project.ps1 Acme.Portal -WithSample
+#   powershell -File scripts/new-project.ps1 Contoso.Portal
+#   powershell -File scripts/new-project.ps1 Contoso.Portal -WithSample
 #
 # Delegates to the real new-project.sh via Git Bash when found (single
 # source of truth for the actual rename logic); otherwise tells you what to

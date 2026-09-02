@@ -101,7 +101,7 @@ A clean run then rewrites `.template-version` and later runs need no `--base`.
 ## Notes
 
 - The identifier rewrite is a literal `s/dotnetskills/<your-id>/g`. It's safe for
-  identifiers made of letters, digits, `.` and `_` (e.g. `Acme.Portal`). If yours
+  identifiers made of letters, digits, `.` and `_` (e.g. `Contoso.Portal`). If yours
   contains a `/`, `&` or `\`, patch by hand.
 - Run it on a clean working tree, on a branch — it's a review-then-merge step,
   not a silent auto-update.

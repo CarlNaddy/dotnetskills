@@ -4,11 +4,13 @@ using dotnetskills.Data;
 using dotnetskills.Data.Seed;
 using dotnetskills.Endpoints;
 using dotnetskills.Features.Email;
+using dotnetskills.Features.Files;
 using dotnetskills.Features.Jobs;
 using dotnetskills.Features.Listings;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -154,6 +156,34 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+// File storage (parity plan P4.4, ActiveStorage analog) — IFileStore behind a
+// config-driven provider switch; only LocalDisk exists today, a blob
+// provider (Azure/S3) is a later addition to this switch, not a rewrite of
+// callers. See docs/file-storage.md.
+builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
+var fileStorageProvider = builder.Configuration["FileStorage:Provider"] ?? "LocalDisk";
+switch (fileStorageProvider)
+{
+    case "LocalDisk":
+        builder.Services.AddScoped<IFileStore, LocalDiskFileStore>();
+        break;
+    default:
+        throw new InvalidOperationException(
+            $"Unknown FileStorage:Provider '{fileStorageProvider}'. Supported: LocalDisk.");
+}
+
+builder.Services.AddScoped<ListingPhotoService>();
+
+// dotnet-aspnetcore:minimal-api-file-upload — the multipart body limit is a
+// global FormOptions setting with no per-endpoint override, but this app has
+// only one multipart form (the photo upload), so 5 MB here is scoped in
+// practice even though the config isn't. The Kestrel-level request size
+// limit, which *does* have a per-endpoint override, stays at its framework
+// default globally and is narrowed to 5 MB only on the photo endpoint
+// ([RequestSizeLimit] in ListingsApiEndpoints.cs) — lowering it here would
+// silently cap every other endpoint in the app, not just this one.
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = 5 * 1024 * 1024);
+
 var app = builder.Build();
 
 // `dotnet run -- seed`: apply migrations + seed sample data, then exit.
@@ -183,6 +213,7 @@ app.UseOutputCache();
 app.MapCultureEndpoints();
 app.MapAccountEndpoints();
 app.MapListingsApiEndpoints();
+app.MapFileEndpoints();
 app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireDashboardAuthorizationFilter()],

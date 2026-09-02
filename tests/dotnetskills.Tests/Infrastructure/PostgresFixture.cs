@@ -51,5 +51,6 @@ public sealed class PostgresFixture : IAsyncLifetime
         await using var db = CreateContext();
         await db.Listings.ExecuteDeleteAsync();
         await db.JobRuns.ExecuteDeleteAsync();
+        await db.StoredFiles.ExecuteDeleteAsync();
     }
 }

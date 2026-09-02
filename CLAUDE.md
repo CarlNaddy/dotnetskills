@@ -19,6 +19,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Background jobs | Hangfire, storage in the app's own PostgreSQL (own `hangfire` schema, not an EF Core migration); `/hangfire` dashboard gated to the `Admin` role (parity plan P4.1) |
 | Email | MailKit via ASP.NET Core Identity's `IEmailSender<TUser>`; Razor-component templates rendered by `HtmlRenderer`; dev sink `smtp4dev` (`compose.yaml`); confirm-before-login + forgot/reset password wired (parity plan P4.2) |
 | Caching / rate limiting | First-party only: `HybridCache` (in-memory, in front of the `Listings` JSON API), `OutputCache`, `AddRateLimiter`; a Redis `IDistributedCache` backplane is vNext (parity plan P4.3) |
+| File storage | `IFileStore` seam, `LocalDiskFileStore` today, config-driven provider switch for a blob provider later; worked pattern is a `Listing` photo (parity plan P4.4) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -259,6 +260,44 @@ Decisions and the worked pattern: [`docs/caching.md`](docs/caching.md).
   framework's own `HybridCache`/`OutputCache`/`AddRateLimiter` internals —
   the `Age` header and the rate limiter's `429` were verified manually
   end-to-end (see `docs/caching.md`).
+
+## File storage
+
+**`IFileStore`** (parity plan **P4.4**, ActiveStorage analog) — content-type-agnostic
+seam; **`LocalDiskFileStore`** is the only implementation today. `Program.cs`
+reads config key `FileStorage:Provider` (default `"LocalDisk"`) to pick the
+implementation — a blob provider (Azure/S3) later means adding a case to
+that switch, not touching any caller. Metadata (`Data/StoredFile.cs`) always
+lives in Postgres regardless of provider; bytes go under
+`FileStorage:RootPath` (default `App_Data/uploads`, gitignored). Decisions
+and the worked pattern: [`docs/file-storage.md`](docs/file-storage.md).
+
+- **The worked pattern:** attaching a photo to a `Listing`
+  (`Features/Listings/ListingPhotoService.cs`) — validated by **magic
+  bytes** (JPEG/PNG signatures), not the spoofable client `Content-Type`.
+  `POST /api/listings/{id}/photo` (external/API clients, uses
+  `dotnet-aspnetcore:minimal-api-file-upload`'s conventions — both size
+  limits configured, magic-byte check, safe generated filenames) and
+  `ListingEdit.razor`'s upload handler (the app's own UI, calling the
+  service **directly via DI** — Interactive Server already runs server-side,
+  so routing through HTTP here would mean the server calling itself and
+  hitting the "Blazor Server loses the auth cookie calling its own API"
+  pitfall for no benefit) both call the same service. `GET /api/files/{id}`
+  serves any stored file, public, provider-agnostic.
+- **Cookie-authenticated endpoints keep antiforgery on** — the upload
+  endpoint is `ListingsWriter`-gated, so `.DisableAntiforgery()` is never
+  called on it (that's only safe for unauthenticated/JWT-bearer endpoints);
+  callers need a valid `__RequestVerificationToken`.
+- **Size limits at two different scopes, deliberately:** `FormOptions.MultipartBodyLengthLimit`
+  is global (no per-endpoint override exists, but this app has one multipart
+  form); the Kestrel-level limit stays at the framework default globally,
+  narrowed to 5 MB only on the photo endpoint via `[RequestSizeLimit]` —
+  lowering Kestrel's default globally would silently cap every other
+  endpoint too.
+- **Testing:** `LocalDiskFileStoreTests` and `ListingPhotoServiceTests`
+  (`tests/dotnetskills.Tests/Features/Files/` and `.../Listings/`) test
+  against a *real* `LocalDiskFileStore` (a throwaway temp dir + real
+  Postgres), not a fake — matching how the rest of this suite avoids mocks.
 
 ## Claude Code plugins & skills
 

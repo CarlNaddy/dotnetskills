@@ -22,8 +22,9 @@ authorize users — all without leaving the toolchain. **P0–P3 and P7 are
 complete** (see the phase checklists below for exactly what was verified and
 how). On testing and type safety the setup is **ahead of Rails**.
 
-**P4 (batteries) is underway — P4.1 (background jobs), P4.2 (email), and P4.3
-(caching + rate limiting) done; P4.4–P4.6 and P5 (deployment) remain.** This is the half where Rails' "it's already there"
+**P4 (batteries) is underway — P4.1 (background jobs), P4.2 (email), P4.3
+(caching + rate limiting), and P4.4 (file storage) all done; P4.5–P4.6 and P5
+(deployment) remain.** This is the half where Rails' "it's already there"
 advantage is structural: no first-party library and no Claude Code skill
 covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
@@ -37,7 +38,7 @@ per item); P5 follows standard Microsoft container/CI guidance.
 | 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
 | 3 | One-command seed on fresh clone | ✅ at parity |
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
-| 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1), email (MailKit, P4.2), and caching/rate limiting (first-party, P4.3) done; file-storage/real-time open (P4.4–P4.5) |
+| 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1), email (MailKit, P4.2), caching/rate limiting (first-party, P4.3), and file storage (`IFileStore`, P4.4) done; real-time open (P4.5, only if a feature needs it) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
 | 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
@@ -56,7 +57,7 @@ definition, or without a direct scorecard line):
 | ActionMailer | ✅ MailKit behind Identity's `IEmailSender<TUser>`, Razor-component templates via `HtmlRenderer`, dev sink `smtp4dev`; confirm-before-login + forgot/reset password wired (P4.2) |
 | ActiveJob + Sidekiq | ✅ Hangfire, storage in the app's own Postgres, `/hangfire` dashboard gated to `Admin` (P4.1) |
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
-| ActiveStorage (files + variants) | ⚠️ `minimal-api-file-upload` = ingest endpoint only, no storage abstraction (P4.4) |
+| ActiveStorage (files + variants) | ✅ `IFileStore` abstraction, `LocalDiskFileStore` + config-driven provider switch, worked pattern `Listing` photos, ingest via `minimal-api-file-upload` conventions (P4.4). No variants/transforms (Rails' image processing) — not asked for |
 | Fragment / Russian-doll caching | ✅ `HybridCache` (in-memory) + `OutputCache` + `AddRateLimiter`, all first-party, fronting the `Listings` JSON API; Redis distributed backplane vNext (P4.3) |
 | Deploy (Kamal / Heroku one-liner) | ❌ no app container / publish target, no full-stack `compose.yaml`, no CI/CD (P5) |
 | Admin panel (ActiveAdmin) | ⚠️ `MudDataGrid` + `create-datadriven` gets you there by generation |
@@ -700,10 +701,48 @@ test-*data* convention.
   P2.3 pattern) prove both caching *and* invalidation against real Postgres.
   `dotnet test` → 22/22 (was 20), clean build with analyzers, `dotnet format
   --verify-no-changes` clean.
-- [ ] **P4.4** File storage (ActiveStorage analog): `IFileStore` abstraction with
+- [x] **P4.4** File storage (ActiveStorage analog): `IFileStore` abstraction with
   a local-disk implementation now, blob (Azure/S3) later; ingest via
   `minimal-api-file-upload`. _Skill:_ `minimal-api-file-upload` · _Accept:_ upload
   persists and is retrievable; implementation swappable by config.
+  _Done:_ `IFileStore` (`Features/Files/`), content-type-agnostic;
+  `LocalDiskFileStore` the only implementation, `Program.cs` picks it via a
+  `FileStorage:Provider` config switch (default `LocalDisk`) — a blob
+  provider later adds a case, touches no caller. Metadata (`Data/StoredFile.cs`,
+  +migration) always in Postgres; bytes under `FileStorage:RootPath`
+  (gitignored). Worked pattern: `Features/Listings/ListingPhotoService.cs`
+  attaches a photo to a `Listing` — magic-byte validation (JPEG/PNG
+  signatures, not the spoofable `Content-Type` header, per
+  `minimal-api-file-upload`'s explicit warning), safe generated filenames,
+  both size limits configured (global `FormOptions` limit + a
+  Kestrel-level `[RequestSizeLimit]` scoped to just this endpoint, not
+  lowered globally). Two callers, one service: `POST /api/listings/{id}/photo`
+  (external clients; cookie-authenticated, so antiforgery stays **on** —
+  the skill's warning against disabling it for cookie auth) and
+  `ListingEdit.razor`'s upload handler, which calls the service **directly
+  via DI** rather than through HTTP — Interactive Server already runs
+  server-side, so routing through the endpoint would mean the server
+  calling itself and hitting the "loses the auth cookie" pitfall for no
+  benefit. `GET /api/files/{id}` serves any stored file, public,
+  provider-agnostic. Convention doc: [`docs/file-storage.md`](file-storage.md);
+  `CLAUDE.md` has a "File storage" section + Stack row.
+  **Caught a real bug along the way:** both `Listing` delete handlers used a
+  raw `ExecuteDeleteAsync` with no photo cleanup (would orphan the file +
+  `StoredFile` row once photos existed), and `ListingDetails.razor`'s
+  independent delete path never got the P4.3 cache invalidation
+  `Listings.razor`'s did. Consolidated both into
+  `ListingPhotoService.DeleteListingAsync`.
+  **Verified end-to-end** against the real Docker Postgres, a running
+  `dotnet run`, real `curl` (auth cookie + antiforgery token): unauthenticated
+  upload → 302; authenticated, no antiforgery token → 400; valid PNG →
+  200 + the listing's `photoFileId` updates; `GET /api/files/{id}` returns
+  the exact bytes (`cmp` byte-identical); non-image content → 400 with the
+  service's own rejection message — the magic-byte check firing through the
+  real HTTP layer; a 6 MB upload against the 5 MB limit → 400, inner
+  exception literally `"Request body too large"`. `LocalDiskFileStoreTests`
+  (3) + `ListingPhotoServiceTests` (4) — against a *real* store, not a fake —
+  pass. `dotnet test` → 29/29 (was 22), clean build with analyzers, `dotnet
+  format --verify-no-changes` clean.
 - [ ] **P4.5** Real-time (ActionCable analog) — **only if a feature needs it.**
   App-level SignalR hub for notifications / presence with a typed client; Blazor
   Interactive Server already runs on SignalR for the UI. _Skill:_ — · _Accept:_

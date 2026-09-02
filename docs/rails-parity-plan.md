@@ -22,8 +22,8 @@ authorize users — all without leaving the toolchain. **P0–P3 and P7 are
 complete** (see the phase checklists below for exactly what was verified and
 how). On testing and type safety the setup is **ahead of Rails**.
 
-**P4 (batteries) is underway — P4.1 (background jobs) done; P4.2–P4.6 and P5
-(deployment) remain.** This is the half where Rails' "it's already there"
+**P4 (batteries) is underway — P4.1 (background jobs) and P4.2 (email) done;
+P4.3–P4.6 and P5 (deployment) remain.** This is the half where Rails' "it's already there"
 advantage is structural: no first-party library and no Claude Code skill
 covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
@@ -37,7 +37,7 @@ per item); P5 follows standard Microsoft container/CI guidance.
 | 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
 | 3 | One-command seed on fresh clone | ✅ at parity |
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
-| 5 | Jobs / email / cache / file storage / real-time | 🟡 background jobs done (Hangfire, P4.1); email/cache/file-storage/real-time open (P4.2–P4.5) |
+| 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1) and email (MailKit, P4.2) done; cache/file-storage/real-time open (P4.3–P4.5) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
 | 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
@@ -53,7 +53,7 @@ definition, or without a direct scorecard line):
 | EF Core test approach | ✅ Testcontainers + real Postgres (P2.3) |
 | Component tests | ✅ `bUnit` (P2.4) |
 | `rails console` (REPL over app DI) | ❌ no skill, no ergonomic equivalent (P6.2) |
-| ActionMailer | ❌ no skill, nothing wired (P4.2) |
+| ActionMailer | ✅ MailKit behind Identity's `IEmailSender<TUser>`, Razor-component templates via `HtmlRenderer`, dev sink `smtp4dev`; confirm-before-login + forgot/reset password wired (P4.2) |
 | ActiveJob + Sidekiq | ✅ Hangfire, storage in the app's own Postgres, `/hangfire` dashboard gated to `Admin` (P4.1) |
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
 | ActiveStorage (files + variants) | ⚠️ `minimal-api-file-upload` = ingest endpoint only, no storage abstraction (P4.4) |
@@ -628,10 +628,46 @@ test-*data* convention.
   Hangfire's own dashboard "Trigger now" — its own internal CSRF scheme,
   separate from ASP.NET Core's antiforgery, not worth reverse-engineering
   when the job body and the registration are already independently verified.
-- [ ] **P4.2** Email (ActionMailer analog): `MailKit` + Razor-templated bodies;
+- [x] **P4.2** Email (ActionMailer analog): `MailKit` + Razor-templated bodies;
   dev sink (`smtp4dev` / Papercut / file drop). Wire the P3.3 confirmation email.
   _Skill:_ — · _Accept:_ confirmation email rendered and delivered to the dev
   sink.
+  _Done:_ **MailKit**, behind ASP.NET Core Identity's own `IEmailSender<TUser>`
+  seam (the hook Identity's own scaffolded pages use — Microsoft-standard,
+  not a bespoke interface). Templates are Razor **components**
+  (`Features/Email/Templates/`), rendered to HTML strings by
+  `Microsoft.AspNetCore.Components.Web.HtmlRenderer` (first-party, .NET 8+ —
+  this app is Blazor, not MVC, so there's no `IRazorViewEngine` to reuse).
+  Dev sink **smtp4dev** added to `compose.yaml` (service `mail`; P5.2's
+  remaining scope is the *app* container, not this sink — moved forward from
+  its original P5.2 slot since P4.2 needs somewhere to deliver to). Went
+  beyond the literal "confirmation email" accept criterion to a genuinely
+  real confirm-before-login gate: `RequireConfirmedAccount = true`,
+  `Register.razor` sends the confirmation link instead of signing in
+  immediately, `Components/Account/Pages/ConfirmEmail.razor` completes it,
+  `Login.razor` gives `SignInResult.NotAllowed` its own message. Added the
+  password-reset flow too (`ForgotPassword.razor` /
+  `ResetPassword.razor` / `ResetPasswordConfirmation.razor`) as the second
+  worked template, exercising `IEmailSender<TUser>`'s other two methods
+  (`SendPasswordResetLinkAsync` fully wired; `SendPasswordResetCodeAsync`
+  implemented for interface completeness, no dedicated UI). External logins
+  and the dev admin seed are unaffected (already `EmailConfirmed = true`,
+  P3.4/P3.6). Convention doc: [`docs/email.md`](email.md); `CLAUDE.md` has a
+  "Email" section + Stack row + a note in "Authentication & authorization".
+  **Caught a real security-relevant gap along the way, not just a
+  vulnerability this time:** the app had *no* email confirmation at all
+  before this — any address, valid or not, could register and sign in
+  immediately.
+  **Verified end-to-end** against the real Docker Postgres + smtp4dev, a
+  running `dotnet run`, real `curl` requests (antiforgery token + `_handler`
+  field, the P3.3 pattern): registered a new user → smtp4dev's REST API shows
+  the real rendered "Confirm your email" HTML with a working link → login
+  *before* confirming → blocked with the custom message → followed the link
+  → confirmed → login *after* → 302. Same full round-trip for forgot/reset
+  password, ending in a successful login with the *new* password.
+  `RazorEmailRendererTests` (2 tests, pure/deterministic — no SMTP, no DB)
+  pass. `dotnet test` → 20/20 (was 18), clean build with analyzers, `dotnet
+  format --verify-no-changes` clean.
 - [ ] **P4.3** Caching + rate limiting, all first-party: `HybridCache` /
   `IMemoryCache` (in-memory — no distributed cache yet), `OutputCache` on suitable
   endpoints, and the built-in `AddRateLimiter` middleware (.NET 7+). A **Redis**

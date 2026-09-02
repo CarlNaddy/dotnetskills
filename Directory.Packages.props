@@ -13,6 +13,7 @@
          Newtonsoft.Json 11.0.1 chain with a known high-severity advisory
          (GHSA-5crp-9r3c-p9vr), even though Hangfire.AspNetCore already brings a
          patched Hangfire.Core 1.8.25. Pin Newtonsoft.Json directly. -->
+    <PackageVersion Include="MailKit" Version="4.17.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="MudBlazor" Version="9.9.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />

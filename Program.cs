@@ -3,9 +3,11 @@ using dotnetskills.Components.Account;
 using dotnetskills.Data;
 using dotnetskills.Data.Seed;
 using dotnetskills.Endpoints;
+using dotnetskills.Features.Email;
 using dotnetskills.Features.Jobs;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -92,7 +94,12 @@ if (!string.IsNullOrEmpty(gitHubAuth["ClientId"]))
     });
 }
 
-builder.Services.AddIdentityCore<ApplicationUser>()
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    // P4.2: a registered user must confirm their email before signing in —
+    // SignInManager checks this automatically, surfacing SignInResult.NotAllowed.
+    // External logins bypass it (ExternalLogin.razor sets EmailConfirmed = true,
+    // trusting the provider's own verification); the dev admin seed does too.
+    options.SignIn.RequireConfirmedAccount = true)
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager()
@@ -102,6 +109,15 @@ builder.Services.AddIdentityCore<ApplicationUser>()
 // throws a handled NavigationException during static rendering — see
 // Components/Account/IdentityRedirectManager.cs.
 builder.Services.AddScoped<IdentityRedirectManager>();
+
+// Email (parity plan P4.2) — MailKit over SMTP settings in EmailOptions (dev
+// default: the smtp4dev sink in compose.yaml, zero config needed). Templates
+// are Razor components rendered to HTML via HtmlRenderer (the first-party way
+// to render components outside a request, .NET 8+) — see docs/email.md.
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<HtmlRenderer>();
+builder.Services.AddScoped<RazorEmailRenderer>();
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, MailKitEmailSender>();
 
 // Background jobs (parity plan P4.1) — Hangfire, storage in the app's own
 // Postgres DB (own schema, managed by Hangfire itself — not an EF Core

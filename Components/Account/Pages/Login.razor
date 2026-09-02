@@ -68,6 +68,9 @@
 <MudText Class="mt-4">
     <MudLink Href="Account/Register">Register as a new user</MudLink>
 </MudText>
+<MudText Class="mt-2">
+    <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink>
+</MudText>
 
 @code {
     private AuthenticationScheme[] _externalLogins = [];
@@ -99,7 +102,11 @@
             return;
         }
 
-        _errorMessage = "Error: invalid login attempt.";
+        // P4.2: RequireConfirmedAccount rejects sign-in with NotAllowed, not a
+        // plain failure — give that case its own message.
+        _errorMessage = result.IsNotAllowed
+            ? "Error: confirm your email before logging in — check your inbox for the confirmation link."
+            : "Error: invalid login attempt.";
     }
 
     private sealed class InputModel

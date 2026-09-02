@@ -13,7 +13,7 @@ separate set of facts to keep in sync.
 
 ---
 
-## Status (as of 2026-09-02)
+## Status (as of 2026-09-03)
 
 **The core inner loop is at Rails parity.** A developer can define a model,
 evolve its schema through reversible migrations, scaffold a list/details/
@@ -23,10 +23,15 @@ complete** (see the phase checklists below for exactly what was verified and
 how). On testing and type safety the setup is **ahead of Rails**.
 
 **P4 (batteries) is underway — P4.1 (background jobs), P4.2 (email), P4.3
-(caching + rate limiting), and P4.4 (file storage) all done; P4.5–P4.6 and P5
-(deployment) remain.** This is the half where Rails' "it's already there"
-advantage is structural: no first-party library and no Claude Code skill
-covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
+(caching + rate limiting), and P4.4 (file storage) all done; P4.5 (real-time)
+stays open only conditionally — the plan itself gates it on a feature
+actually needing it, and none currently does; P4.6 (observability) is
+deferred to vNext.** **P5 (deployment) is underway too — P5.1 (container
+image) and P5.2 (full local stack) done; P5.3 (CI/CD to a live target) needs
+a hosting decision and real credentials, not something to pick unilaterally;
+P5.4 (production hardening) is next in line.** P4 is the half where Rails'
+"it's already there" advantage is structural: no first-party library and no
+Claude Code skill covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
 per item); P5 follows standard Microsoft container/CI guidance.
 
@@ -40,7 +45,7 @@ per item); P5 follows standard Microsoft container/CI guidance.
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
 | 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1), email (MailKit, P4.2), caching/rate limiting (first-party, P4.3), and file storage (`IFileStore`, P4.4) done; real-time open (P4.5, only if a feature needs it) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
-| 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
+| 7 | One-command local stack + one deploy pipeline | 🟡 `bash scripts/run-stack.sh` — app + Postgres + mail sink, one command (P5.1–P5.2); CI/CD to a live target + prod hardening open (P5.3–P5.4) |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
 
 ### Rails capability → where this stack lands
@@ -59,7 +64,7 @@ definition, or without a direct scorecard line):
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
 | ActiveStorage (files + variants) | ✅ `IFileStore` abstraction, `LocalDiskFileStore` + config-driven provider switch, worked pattern `Listing` photos, ingest via `minimal-api-file-upload` conventions (P4.4). No variants/transforms (Rails' image processing) — not asked for |
 | Fragment / Russian-doll caching | ✅ `HybridCache` (in-memory) + `OutputCache` + `AddRateLimiter`, all first-party, fronting the `Listings` JSON API; Redis distributed backplane vNext (P4.3) |
-| Deploy (Kamal / Heroku one-liner) | ❌ no app container / publish target, no full-stack `compose.yaml`, no CI/CD (P5) |
+| Deploy (Kamal / Heroku one-liner) | 🟡 `dotnet publish -t:PublishContainer` + `bash scripts/run-stack.sh` = one-command local full stack (P5.1–P5.2); CI/CD to a live target needs a hosting decision (P5.3), prod hardening open (P5.4) |
 | Admin panel (ActiveAdmin) | ⚠️ `MudDataGrid` + `create-datadriven` gets you there by generation |
 | Observability | ⚠️ built-in `ILogger` now; health checks + OpenTelemetry deferred (P4.6 / vNext) |
 
@@ -759,16 +764,45 @@ test-*data* convention.
 Follow the official Microsoft container guidance ("Containerize a .NET app",
 "ASP.NET Core and Docker Compose") — no bespoke setup.
 
-- [ ] **P5.1** Container image, the Microsoft-standard way. Prefer the built-in
+- [x] **P5.1** Container image, the Microsoft-standard way. Prefer the built-in
   **.NET SDK container publish** (`dotnet publish -t:PublishContainer`,
   `mcr.microsoft.com/dotnet/aspnet` base) — no Dockerfile to maintain; fall back
   to the standard multi-stage `Dockerfile` from the `dotnet` samples only if more
   control is needed. Add `.dockerignore`. _Skill:_ `dotnet-webapi` /
   `dotnet-aspnetcore` patterns · _Accept:_ image builds and runs.
-- [ ] **P5.2** Full local stack in one command via a standard `compose.yaml`
+  _Done:_ `dotnet publish dotnetskills.csproj -t:PublishContainer -c Release`
+  — no Dockerfile added. Base image/tag resolve from `TargetFramework`
+  (`mcr.microsoft.com/dotnet/aspnet:10.0`); `<ContainerRepository>dotnetskills</ContainerRepository>`
+  pins the name in `dotnetskills.csproj`. `.dockerignore` added for the
+  documented Dockerfile-fallback path (the SDK publish path itself builds
+  from `dotnet publish` output, not a build context, so doesn't read it).
+  **Verified end-to-end**: image builds (381MB), `docker run` connected to
+  the real Postgres over the compose network — home page and `/listings`
+  both 200, `/api/listings` returns real data, proving genuine DB
+  connectivity through the container, not just "the process starts." One
+  known-benign startup message (`libgssapi_krb5.so.2` — Npgsql's optional
+  GSSAPI probe, unused since this app is password-auth only) documented
+  rather than chased. Convention doc: [`docs/deployment.md`](deployment.md).
+- [x] **P5.2** Full local stack in one command via a standard `compose.yaml`
   (app + Postgres + mail sink), per the MS Docker Compose docs. **No Aspire.**
   Redis is added here only at **(vNext)**. _Skill:_ — · _Accept:_ one command
   serves the app with its dependencies.
+  _Done:_ `compose.yaml` gets an `app` service — image `dotnetskills:latest`
+  (the P5.1 build), **not** a Dockerfile `build:` section (Compose's build
+  mechanism expects one, and P5.1 deliberately has none), so a bare `docker
+  compose up` can't build it from source. `scripts/run-stack.sh` is what
+  makes it genuinely one command: runs the P5.1 publish, `docker compose up
+  -d`, then seeds via `docker compose run --rm app seed` (the image's
+  exec-form `ENTRYPOINT` + an appended `seed` arg reaches the same `dotnet
+  run -- seed` verb dispatch). `--down` / `--no-seed` flags.
+  **Verified end-to-end from a genuinely fresh state**
+  (`docker compose down -v`, wiping the Postgres volume, then the script
+  with nothing pre-existing): image builds, all three services start (`db`
+  reaches `healthy`), the seed step applies migrations + sample + admin
+  data inside the container, the running stack immediately serves it (home
+  page 200, `/api/listings` real sample data, mail sink UI 200). Reran the
+  script against the now-seeded stack — idempotent (`"Admin user ... already
+  present"`, no duplicate). `--down` cleanly stops/removes everything.
 - [ ] **P5.3** CI/CD pipeline (GitHub Actions): restore → build → test → publish →
   deploy; one target (Azure Container Apps / App Service / Fly.io / self-host).
   _Skill:_ — · _Accept:_ green pipeline deploys to a live environment.

@@ -6,6 +6,15 @@
     <UserSecretsId>230b5278-ccf0-4f1b-9ff6-0692cadb3827</UserSecretsId>
   </PropertyGroup>
 
+  <!-- Container image (parity plan P5.1) — the built-in .NET SDK container
+       publish, not a hand-maintained Dockerfile: `dotnet publish
+       -t:PublishContainer`. Base image + tag resolve automatically from
+       TargetFramework (mcr.microsoft.com/dotnet/aspnet:10.0); only the
+       repository name is worth pinning explicitly. See docs/deployment.md. -->
+  <PropertyGroup>
+    <ContainerRepository>dotnetskills</ContainerRepository>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- The test project is under tests/ (same repo root as this Web SDK
          project), so exclude it from the default globs. -->

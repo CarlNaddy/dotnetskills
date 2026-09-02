@@ -21,6 +21,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Caching / rate limiting | First-party only: `HybridCache` (in-memory, in front of the `Listings` JSON API), `OutputCache`, `AddRateLimiter`; a Redis `IDistributedCache` backplane is vNext (parity plan P4.3) |
 | File storage | `IFileStore` seam, `LocalDiskFileStore` today, config-driven provider switch for a blob provider later; worked pattern is a `Listing` photo (parity plan P4.4) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
+| Deployment | SDK container publish (`dotnet publish -t:PublishContainer`, no Dockerfile); `bash scripts/run-stack.sh` = full local stack in one command (parity plan P5.1–P5.2); CI/CD + prod hardening open (P5.3–P5.4) |
 
 ## Build / run / test
 
@@ -298,6 +299,32 @@ and the worked pattern: [`docs/file-storage.md`](docs/file-storage.md).
   (`tests/dotnetskills.Tests/Features/Files/` and `.../Listings/`) test
   against a *real* `LocalDiskFileStore` (a throwaway temp dir + real
   Postgres), not a fake — matching how the rest of this suite avoids mocks.
+
+## Deployment
+
+Official Microsoft container guidance throughout (parity plan **P5**) — no
+Dockerfile to maintain, no Aspire. Decisions, the worked commands, and full
+verification notes: [`docs/deployment.md`](docs/deployment.md).
+
+- **Container image (P5.1):** `dotnet publish dotnetskills.csproj
+  -t:PublishContainer -c Release` — the SDK's built-in container publish
+  (`Microsoft.NET.Build.Containers`), not a hand-maintained `Dockerfile`.
+  Base image/tag resolve from `TargetFramework`
+  (`mcr.microsoft.com/dotnet/aspnet:10.0`); `<ContainerRepository>` in
+  `dotnetskills.csproj` pins the image name. Listens on **port 8080** (the
+  MS image default), not the `launchSettings.json` dev ports (5066/7105).
+- **Full local stack (P5.2):** `bash scripts/run-stack.sh` — genuinely one
+  command, even though `compose.yaml`'s `app` service (talks to `db`/`mail`
+  by service name, not `localhost`) references a pre-built image rather than
+  a Dockerfile `build:` section; the script runs the P5.1 publish, then
+  `docker compose up -d`, then seeds
+  (`docker compose run --rm app seed` — reaches the same `dotnet run --
+  seed` verb dispatch via the image's exec-form `ENTRYPOINT`). `--down`
+  stops everything; `--no-seed` skips the seed step.
+- **Open:** P5.3 (CI/CD to a live target) needs an actual hosting decision
+  and real credentials — not something to pick unilaterally. P5.4
+  (production hardening) is next in line — the P5.1 verification run
+  already surfaced the exact Data Protection warning it fixes.
 
 ## Claude Code plugins & skills
 

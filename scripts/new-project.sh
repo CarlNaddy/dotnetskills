@@ -31,6 +31,10 @@ done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# shellcheck source=_guard-not-template.sh
+. "$ROOT/scripts/_guard-not-template.sh"
+guard_not_template_repo
+
 [ -n "$NEW" ]        || { echo "usage: scripts/new-project.sh <NewName> [--with-sample]" >&2; exit 2; }
 [ "$NEW" != "$OLD" ] || { echo "name unchanged; nothing to do" >&2; exit 1; }
 
@@ -43,7 +47,7 @@ echo "==> Replacing identifier '$OLD' -> '$NEW' in tracked text files"
 git ls-files -z \
     | grep -zvE '(^|/)(bin|obj)/' \
     | grep -zvE '\.(png|jpe?g|gif|ico|woff2?|ttf|eot)$' \
-    | grep -zvE '(^|/)(scripts/new-project|scripts/update-from-template)\.sh$' \
+    | grep -zvE '(^|/)(scripts/new-project|scripts/update-from-template|scripts/_guard-not-template)\.sh$' \
     | grep -zvE '(^|/)docs/updating-from-template\.md$' \
     | xargs -0 sed -i "s/${OLD}/${NEW}/g"
 
@@ -177,7 +181,8 @@ Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample
   6. (optional) spec-driven development:  bash scripts/setup-openspec.sh
        then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
   7. Remove the templating helpers you no longer need:
-       git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh docs/new-project.md
+       git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh \\
+         scripts/_guard-not-template.sh docs/new-project.md
      Keep: scripts/preflight.sh, scripts/preflight.ps1, scripts/_find-git-bash.ps1,
      scripts/check-plugins.sh, scripts/setup-openspec.sh, docs/ef-migrations.md, and
      — to pull future template updates — scripts/update-from-template.sh,

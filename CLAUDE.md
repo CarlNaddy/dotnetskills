@@ -175,8 +175,6 @@ behavior across machines and over time; the marketplace only moves when its
 `dotnet-ai`, `dotnet-diag`, `dotnet-maui`, `dotnet-msbuild`, `dotnet-nuget`,
 `dotnet-template-engine`, `dotnet-test-migration`, `dotnet-upgrade`,
 `dotnet-experimental`; add any to `enabledPlugins` per project if a task needs it.
-Building and resyncing that marketplace repo:
-[`docs/vendoring-dotnet-skills.md`](docs/vendoring-dotnet-skills.md).
 
 **Onboarding:** open the repo in Claude Code and accept the prompt to trust the
 `dotnet-agent-skills` marketplace. The plugins listed under `enabledPlugins`

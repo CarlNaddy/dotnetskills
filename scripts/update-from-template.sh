@@ -107,7 +107,6 @@ LICENSE
 scripts/new-project.sh
 docs/new-project.md
 docs/rails-parity-plan.md
-docs/rails-parity-assessment.md
 docs/setup-log.md
 '
 # Carry project-specific values (DB name/credentials, etc.) — shown for manual merge.

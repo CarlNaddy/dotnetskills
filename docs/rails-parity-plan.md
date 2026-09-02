@@ -1,13 +1,72 @@
 # Rails-parity plan
 
 Working backlog to bring this repo's developer productivity to Ruby on Rails
-parity. Companion to [`rails-parity-assessment.md`](./rails-parity-assessment.md)
-(the analysis); this file is the task list.
+parity. This is both the task list and the status report — each phase's
+`[x]`/`[ ]` checkboxes plus their `_Done:_` notes are the single source of
+truth; the Status section below is a periodic snapshot for orientation, not a
+separate set of facts to keep in sync.
 
 - **Completed** items (`[x]`) = capabilities we already have: installed plugins,
   available skills, and setup steps already done.
 - **Open** items (`[ ]`) = the gaps, grouped into phases with dependencies and
   acceptance criteria.
+
+---
+
+## Status (as of 2026-09-01)
+
+**The core inner loop is at Rails parity.** A developer can define a model,
+evolve its schema through reversible migrations, scaffold a list/details/
+create/edit/delete UI over it, seed a working dataset, and authenticate/
+authorize users — all without leaving the toolchain. **P0–P3 and P7 are
+complete** (see the phase checklists below for exactly what was verified and
+how). On testing and type safety the setup is **ahead of Rails**.
+
+**What's left is P4 (batteries) and P5 (deployment)** — roughly half the plan
+by volume, and the half where Rails' "it's already there" advantage is
+structural: no first-party library and no Claude Code skill covers background
+jobs, mailers, caching, file storage, real-time, or a deploy pipeline. Each P4
+item is a decide-a-library + wire-a-seam + write-a-convention exercise (see the
+P4 phase below for the chosen library per item); P5 follows standard Microsoft
+container/CI guidance.
+
+### Scorecard against the "parity" definition above
+
+| # | Capability | Status |
+|---|---|---|
+| 1 | Model + reversible migrations | ✅ at parity |
+| 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
+| 3 | One-command seed on fresh clone | ✅ at parity |
+| 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
+| 5 | Jobs / email / cache / file storage / real-time | ❌ not started (P4) |
+| 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
+| 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
+| 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
+
+### Rails capability → where this stack lands
+
+Capabilities not covered by the scorecard above (finer-grained than the 8-point
+definition, or without a direct scorecard line):
+
+| Rails capability | Status here |
+|---|---|
+| Test factories (FactoryBot) / fixtures | ✅ `Bogus`-backed builders (P2.2) |
+| EF Core test approach | ✅ Testcontainers + real Postgres (P2.3) |
+| Component tests | ✅ `bUnit` (P2.4) |
+| `rails console` (REPL over app DI) | ❌ no skill, no ergonomic equivalent (P6.2) |
+| ActionMailer | ❌ no skill, nothing wired (P4.2) |
+| ActiveJob + Sidekiq | ❌ no MS first-party — Hangfire (recommended) / Quartz.NET (P4.1) |
+| ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
+| ActiveStorage (files + variants) | ⚠️ `minimal-api-file-upload` = ingest endpoint only, no storage abstraction (P4.4) |
+| Fragment / Russian-doll caching | ❌ no wiring for `OutputCache` / `HybridCache` / rate limiting (P4.3) |
+| Deploy (Kamal / Heroku one-liner) | ❌ no app container / publish target, no full-stack `compose.yaml`, no CI/CD (P5) |
+| Admin panel (ActiveAdmin) | ⚠️ `MudDataGrid` + `create-datadriven` gets you there by generation |
+| Observability | ⚠️ built-in `ILogger` now; health checks + OpenTelemetry deferred (P4.6 / vNext) |
+
+Full per-item detail, verification evidence, and file paths live in the phase
+checklists below — that's the record to trust, not this summary.
+
+---
 
 ## Why markdown and not OpenSpec
 

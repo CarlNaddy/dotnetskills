@@ -102,7 +102,6 @@ EOF
 echo "==> Removing this repo's history docs"
 git rm -qf --ignore-unmatch \
     docs/rails-parity-plan.md \
-    docs/rails-parity-assessment.md \
     docs/setup-log.md
 
 echo "==> Recording template baseline (.template-version)"

@@ -62,20 +62,78 @@ dispatch, reached by appending `seed` to the image's exec-form
 - Redis is **(vNext)**, per the standing scoping decision — added only if
   the app ever runs more than one instance.
 
-## What's still open (P5.3, P5.4)
+## P5.4 — Production hardening
 
-- **P5.3** — CI/CD to a live target needs an actual hosting decision (Azure
-  Container Apps / App Service / Fly.io / self-host) and real credentials —
-  not something to pick unilaterally. GitHub Actions already runs
-  restore → build → test (P2.5); extending it to publish + deploy is
-  straightforward once a target is chosen.
-- **P5.4** — production hardening: HTTPS, persisted Data Protection keys
-  (the P5.1 verification run surfaced the exact warning this fixes — "No XML
-  encryptor configured... may be persisted in unencrypted form," and without
-  persistence, auth cookies don't survive a container restart), secrets via
-  env/key vault (already the pattern for connection strings and OAuth
-  secrets — P5.4 is about formalizing it, not introducing it), `/health` +
-  `/alive` health checks.
+### Data Protection keys persist in Postgres, not in memory
+
+`AppDbContext` implements `IDataProtectionKeyContext`;
+`AddDataProtection().SetApplicationName("dotnetskills").PersistKeysToDbContext<AppDbContext>()`
+(`Program.cs`) stores the key ring in a new `DataProtectionKeys` table
+instead of the in-memory default, which silently regenerates a fresh key
+ring on every restart — invalidating every issued auth cookie and
+antiforgery token without any visible error, just users getting logged out
+and CSRF-token mismatches after every deploy. Same "no separate infra"
+pattern as everything else in this app (Hangfire, caching): Postgres, not a
+new store.
+
+`SetApplicationName` matters specifically because `dotnet watch run` (host,
+content root `C:\...\dotnetskills`) and the container (content root `/app`)
+have different `ContentRootPath`s, which Data Protection otherwise folds
+into the key ring's identity — without a fixed name, keys written by one
+environment wouldn't be recognized as belonging to "this app" by the other,
+even sharing the same Postgres table.
+
+**Persistence, not encryption-at-rest.** The XML key material is stored
+un-encrypted in the database — ASP.NET Core's own "No XML encryptor
+configured" warning still prints, and still should: that's flagging a
+*different, separate* concern (protecting the keys themselves via a
+certificate or cloud KMS) from what was actually broken (keys not
+surviving a restart at all). Encrypting them needs real key-management
+infrastructure this environment doesn't have — the same category of gap as
+P5.3's live deploy target: a real decision needing real infrastructure, not
+something to fake. Documented here rather than silently left unmentioned.
+
+### `/health` and `/alive`
+
+The MS-documented split for container orchestrators that probe the two
+differently: `/health` runs every registered check (a `"self"` check plus
+`AddDbContextCheck<AppDbContext>()`) — readiness, "can this instance
+actually serve requests." `/alive` runs only checks tagged `"live"` (just
+`"self"`) — liveness, "is the process running," with no dependency calls,
+for a fast probe that shouldn't fail just because the database is briefly
+unreachable.
+
+### Forwarded headers, for correct HTTPS detection behind a proxy
+
+A containerized deploy terminates TLS at the ingress/reverse-proxy layer,
+not in-process — the container itself only ever speaks plain HTTP inside
+the platform's network. Without `UseForwardedHeaders`, the app never sees
+the original request as HTTPS, so `UseHttpsRedirection` would redirect-loop
+behind a proxy that already terminated TLS for the client. Placed **before**
+`UseHttpsRedirection` in the pipeline, and deliberately clears
+`KnownIPNetworks`/`KnownProxies` (the default only trusts loopback, which is
+a silent no-op behind a real cloud load balancer whose IP isn't loopback and
+usually isn't static enough to allowlist) — trusting the platform's own
+network boundary (only the load balancer can reach the container) instead
+of an IP allowlist, the standard tradeoff for this deployment shape.
+
+### Secrets via env / key vault — already the pattern, not new here
+
+Every secret already follows env-in-prod / user-secrets-in-dev: the
+connection string (P1.3), OAuth client secrets (P3.4), the seed admin
+password (P3.6, and the seeder throws if it's unset outside Development).
+P5.4 doesn't introduce a new mechanism — it's the confirmation that the
+pattern already covers everything, including the two things P5.4 itself
+added (Data Protection needs no secret at all; health checks expose no
+secret either).
+
+## What's still open (P5.3)
+
+CI/CD to a live target needs an actual hosting decision (Azure Container
+Apps / App Service / Fly.io / self-host) and real credentials — not
+something to pick unilaterally. GitHub Actions already runs
+restore → build → test (P2.5); extending it to publish + deploy is
+straightforward once a target is chosen.
 
 ## Verified end-to-end (2026-09-03)
 
@@ -96,3 +154,22 @@ home page `200`, `/api/listings` returns the real sample listings, mail
 sink UI `200`. Reran the script against the now-seeded stack — idempotent,
 logs `"Admin user ... already present"`, no duplicate. `--down` cleanly
 stops and removes all three containers plus the network.
+
+**P5.4**, against the running `run-stack.sh` stack: app logs show real
+`SELECT`/`INSERT` traffic against the new `DataProtectionKeys` table (keys
+genuinely persisting, not just configured to); `/health` and `/alive` both
+return `200 Healthy`. **The actual claim, proven with a real restart, not
+just log-reading:** logged in as the seeded admin via `curl` (real cookie),
+confirmed `/Account/Manage` → `200` with that cookie, then
+`docker compose restart app` (a full container restart, not a graceful
+reload), then replayed the **exact same pre-restart cookie** against
+`/Account/Manage` again → still `200`, still the admin's own account page.
+Without persisted keys, that second request would have failed (the cookie
+encrypted with a now-gone in-memory key) and redirected to login instead —
+confirmed the negative shape of this by recalling P5.1's run, which *did*
+show the "unencrypted form" warning under the *previous*, non-persisted
+configuration. An unauthenticated request to the same page after the
+restart still correctly redirects (`302`) — persistence didn't weaken the
+auth boundary itself. `dotnet test` → 29/29 (unchanged — no test-covered
+code path changed), clean build with analyzers, `dotnet format
+--verify-no-changes` clean.

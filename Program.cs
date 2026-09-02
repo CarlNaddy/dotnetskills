@@ -10,10 +10,14 @@ using dotnetskills.Features.Listings;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -109,6 +113,18 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+// P5.4: Data Protection keys persist in Postgres (AppDbContext implements
+// IDataProtectionKeyContext) instead of the in-memory default, which
+// regenerates a new key on every restart — silently invalidating every
+// issued auth cookie and antiforgery token. A fixed application name keeps
+// the key ring stable across the different ContentRootPath values `dotnet
+// watch run` (host) and the container (/app) each use — without it, the
+// same Postgres-stored keys wouldn't be recognized as belonging to "this app"
+// from both environments. See docs/deployment.md.
+builder.Services.AddDataProtection()
+    .SetApplicationName("dotnetskills")
+    .PersistKeysToDbContext<AppDbContext>();
+
 // P3.3: Register/Login static-SSR pages redirect via NavigationManager, which
 // throws a handled NavigationException during static rendering — see
 // Components/Account/IdentityRedirectManager.cs.
@@ -184,6 +200,14 @@ builder.Services.AddScoped<ListingPhotoService>();
 // silently cap every other endpoint in the app, not just this one.
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = 5 * 1024 * 1024);
 
+// Health checks (parity plan P5.4). "self" (tagged "live") never touches a
+// dependency — that's what /alive maps to, a fast liveness probe. /health
+// maps to every check, "self" plus the database, for readiness (is this
+// instance actually able to serve requests, not just running).
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
+    .AddDbContextCheck<AppDbContext>("database");
+
 var app = builder.Build();
 
 // `dotnet run -- seed`: apply migrations + seed sample data, then exit.
@@ -201,6 +225,25 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// P5.4: a containerized deploy terminates TLS at the ingress/reverse-proxy
+// layer, not in-process — the container itself only ever speaks plain HTTP
+// (see docs/deployment.md). Without this, the app never sees the original
+// request as HTTPS, so UseHttpsRedirection below would redirect-loop behind
+// a proxy that already terminated TLS. Must run before UseHttpsRedirection.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+};
+// Default KnownNetworks/KnownProxies only trust loopback — silently a no-op
+// behind a real cloud load balancer, whose IP isn't loopback and usually
+// isn't static enough to allowlist. Clearing them trusts *any* proxy's
+// headers instead; that's the standard tradeoff for a containerized deploy,
+// where the platform's own network boundary (only the LB can reach the
+// container) is what actually enforces trust, not this allowlist.
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 app.UseHttpsRedirection();
 app.UseRequestLocalization(localizationOptions);
 
@@ -214,6 +257,12 @@ app.MapCultureEndpoints();
 app.MapAccountEndpoints();
 app.MapListingsApiEndpoints();
 app.MapFileEndpoints();
+// /health: every check (readiness — can this instance actually serve
+// requests, DB included). /alive: only "live"-tagged checks (liveness — is
+// the process itself running, no dependencies) — the MS-documented split
+// for container orchestrators that probe the two differently.
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/alive", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
 app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireDashboardAuthorizationFilter()],

@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<Listing> Listings => Set<Listing>();
     public DbSet<JobRun> JobRuns => Set<JobRun>();
+    public DbSet<StoredFile> StoredFiles => Set<StoredFile>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

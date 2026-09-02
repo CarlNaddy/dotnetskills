@@ -486,3 +486,7 @@ $RECYCLE.BIN/
 # Claude Code — commit shared project config, ignore personal/local overrides
 .claude/settings.local.json
 .claude/*.local.json
+
+# Local file storage (parity plan P4.4) — LocalDiskFileStore's default root;
+# the files themselves are dev-machine-local, not repo content.
+/App_Data/

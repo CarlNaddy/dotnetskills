@@ -53,4 +53,7 @@ public class Listing
 
     [StringLength(2000)]
     public string? Description { get; set; }
+
+    /// <summary>The listing's photo, if any — see <see cref="StoredFile"/> (parity plan P4.4).</summary>
+    public Guid? PhotoFileId { get; set; }
 }

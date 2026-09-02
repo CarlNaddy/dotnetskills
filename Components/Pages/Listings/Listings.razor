@@ -1,7 +1,7 @@
 @page "/listings"
 @using dotnetskills.Features.Listings
 @inject IDbContextFactory<AppDbContext> DbFactory
-@inject ListingQueries ListingQueries
+@inject ListingPhotoService PhotoService
 @inject NavigationManager Nav
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -98,11 +98,9 @@
             return;
         }
 
-        await using var db = await DbFactory.CreateDbContextAsync();
-        await db.Listings.Where(l => l.Id == listing.Id).ExecuteDeleteAsync();
-
-        // P4.3: invalidate the API's cached reads — see ListingCreate.razor.
-        await ListingQueries.InvalidateAsync();
+        // P4.4: also deletes the listing's photo file, if any, and invalidates
+        // the API's cached reads (P4.3) — see ListingPhotoService.
+        await PhotoService.DeleteListingAsync(listing.Id, default);
 
         Snackbar.Add("Listing deleted.", Severity.Success);
         await ReloadAsync();

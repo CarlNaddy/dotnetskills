@@ -32,7 +32,10 @@ scaffold, and a worked reference feature — `Listing` CRUD end to end
 | **Git + bash** | the setup scripts (Git Bash on Windows) | <https://git-scm.com/downloads> |
 | Node 18+ *(optional)* | OpenSpec, for spec-driven development | <https://nodejs.org> |
 
-Run `bash scripts/preflight.sh` any time to check these.
+Run `bash scripts/preflight.sh` any time to check these. **On Windows without
+Git Bash yet:** `powershell -File scripts/preflight.ps1` runs the same check —
+it delegates to Git Bash if found, or tells you exactly what to install if not
+(no bash required to get that far).
 
 ## Create a project from this template
 

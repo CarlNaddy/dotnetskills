@@ -18,6 +18,13 @@ the sample feature.
 `scripts/new-project.sh` runs `scripts/preflight.sh` first and stops if a
 required tool is missing; run `bash scripts/preflight.sh` yourself any time.
 
+**On Windows without Git Bash yet:** `powershell -File scripts/preflight.ps1`
+runs the same check from PowerShell/CMD — no bash needed to get that far. It
+delegates to Git Bash if it finds one (checked against Git's own install, not
+just anything named `bash.exe` on PATH — Windows ships an unrelated WSL
+`bash.exe` stub that can't run these scripts), or tells you to install
+[Git for Windows](https://git-scm.com/downloads/win) if it doesn't.
+
 ## One-time (maintainer of *this* repo)
 
 GitHub → **Settings → General → check "Template repository"**. Already done here —
@@ -164,7 +171,7 @@ git commit -m "Initialize from template"
 | `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs` *(kept with `--with-sample`)* |
 | `compose.yaml` shape | the `Listing` `DbSet` + `OnModelCreating` in `AppDbContext.cs`; the `SeedCommand` dispatch in `Program.cs`; the Listings nav link *(kept with `--with-sample`)* |
 | `Program.cs` wiring, `Endpoints/`, `Localization/`, `Resources/`, `tests/<Name>.Tests/` harness | — |
-| `scripts/preflight.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
+| `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
 
 Remove by hand once set up: `scripts/new-project.sh`, `scripts/remove-sample.sh`,
 `docs/new-project.md`. Rewrite: `CLAUDE.md` title + "Reuse" section, `README.md`

@@ -167,7 +167,7 @@ Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample
        then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
   7. Remove the templating helpers you no longer need:
        git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md
-     Keep: scripts/preflight.sh, scripts/check-plugins.sh, scripts/setup-openspec.sh,
+     Keep: scripts/preflight.sh, scripts/preflight.ps1, scripts/check-plugins.sh, scripts/setup-openspec.sh,
      docs/ef-migrations.md, and — to pull future template updates —
      scripts/update-from-template.sh, docs/updating-from-template.md, .template-version.
   8. git add -A && git commit -m "Initialize from template"

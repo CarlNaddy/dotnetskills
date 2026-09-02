@@ -32,10 +32,10 @@ scaffold, and a worked reference feature — `Listing` CRUD end to end
 | **Git + bash** | the setup scripts (Git Bash on Windows) | <https://git-scm.com/downloads> |
 | Node 18+ *(optional)* | OpenSpec, for spec-driven development | <https://nodejs.org> |
 
-Run `bash scripts/preflight.sh` any time to check these. **On Windows without
-Git Bash yet:** `powershell -File scripts/preflight.ps1` runs the same check —
-it delegates to Git Bash if found, or tells you exactly what to install if not
-(no bash required to get that far).
+Run `bash scripts/preflight.sh` any time to check these. **On Windows, without
+Git Bash yet:** every script has a `.ps1` counterpart (`preflight.ps1`,
+`new-project.ps1`) that runs from PowerShell/CMD with no bash needed — each
+delegates to Git Bash if found, or tells you exactly what to install if not.
 
 ## Create a project from this template
 
@@ -47,6 +47,9 @@ tests) but no domain code, like `rails new`.
    ```bash
    bash scripts/new-project.sh Acme.Portal
    ```
+   **Windows without Git Bash yet:** `powershell -File scripts/new-project.ps1
+   Acme.Portal` — same script, delegates via Git Bash.
+
    Replaces the `dotnetskills` identifier and every `dotnetskills`-named file and
    folder, regenerates the `UserSecretsId`, resets this README, removes the
    template's history docs, **strips the `Listing` sample feature** (pass
@@ -66,7 +69,7 @@ tests) but no domain code, like `rails new`.
    dotnet watch run           # http://localhost:5xxx  →  Home
    ```
 5. Make `CLAUDE.md` yours.
-6. `git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md`,
+6. `git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh docs/new-project.md`,
    then commit. Keep `scripts/update-from-template.sh`, `docs/updating-from-template.md`
    and `.template-version` — they let you pull later template changes.
 

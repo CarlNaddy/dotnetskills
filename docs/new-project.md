@@ -18,12 +18,15 @@ the sample feature.
 `scripts/new-project.sh` runs `scripts/preflight.sh` first and stops if a
 required tool is missing; run `bash scripts/preflight.sh` yourself any time.
 
-**On Windows without Git Bash yet:** `powershell -File scripts/preflight.ps1`
-runs the same check from PowerShell/CMD — no bash needed to get that far. It
-delegates to Git Bash if it finds one (checked against Git's own install, not
-just anything named `bash.exe` on PATH — Windows ships an unrelated WSL
-`bash.exe` stub that can't run these scripts), or tells you to install
-[Git for Windows](https://git-scm.com/downloads/win) if it doesn't.
+**On Windows, without Git Bash yet:** every script has a `.ps1` counterpart —
+`scripts/preflight.ps1`, `scripts/new-project.ps1` — that runs from
+PowerShell/CMD with no bash needed to get that far. Each one delegates to Git
+Bash if it finds one (checked against Git's own install, not just anything
+named `bash.exe` on PATH — Windows ships an unrelated WSL `bash.exe` stub that
+runs a separate Linux toolchain and can't see your Windows-side tools), or
+tells you to install [Git for Windows](https://git-scm.com/downloads/win) if
+it doesn't. Windows users can use the `.ps1` commands throughout this guide in
+place of the `bash ...` ones shown.
 
 ## One-time (maintainer of *this* repo)
 
@@ -47,6 +50,16 @@ cd <new-repo>
 bash scripts/new-project.sh Acme.Portal                 # clean skeleton (recommended)
 bash scripts/new-project.sh Acme.Portal --with-sample   # keep the Listing CRUD example
 ```
+
+**Windows without Git Bash yet:**
+
+```powershell
+powershell -File scripts/new-project.ps1 Acme.Portal
+powershell -File scripts/new-project.ps1 Acme.Portal -WithSample
+```
+
+Same script either way — `new-project.ps1` delegates to `new-project.sh` via
+Git Bash (see the Prerequisites note above).
 
 The working tree must be clean. The script:
 
@@ -156,7 +169,7 @@ agent guidance after CLI upgrades.
 ## Step 8 — Commit
 
 ```bash
-git rm scripts/new-project.sh scripts/remove-sample.sh docs/new-project.md   # templating helpers
+git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh docs/new-project.md   # templating helpers
 git add -A
 git commit -m "Initialize from template"
 ```
@@ -171,8 +184,8 @@ git commit -m "Initialize from template"
 | `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs` *(kept with `--with-sample`)* |
 | `compose.yaml` shape | the `Listing` `DbSet` + `OnModelCreating` in `AppDbContext.cs`; the `SeedCommand` dispatch in `Program.cs`; the Listings nav link *(kept with `--with-sample`)* |
 | `Program.cs` wiring, `Endpoints/`, `Localization/`, `Resources/`, `tests/<Name>.Tests/` harness | — |
-| `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
+| `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/_find-git-bash.ps1`, `scripts/check-plugins.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
 
-Remove by hand once set up: `scripts/new-project.sh`, `scripts/remove-sample.sh`,
-`docs/new-project.md`. Rewrite: `CLAUDE.md` title + "Reuse" section, `README.md`
-stub.
+Remove by hand once set up: `scripts/new-project.sh`, `scripts/new-project.ps1`,
+`scripts/remove-sample.sh`, `docs/new-project.md`. Rewrite: `CLAUDE.md` title +
+"Reuse" section, `README.md` stub.

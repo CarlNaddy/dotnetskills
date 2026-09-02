@@ -61,7 +61,13 @@ powershell -File scripts/new-project.ps1 Contoso.Portal -WithSample
 Same script either way — `new-project.ps1` delegates to `new-project.sh` via
 Git Bash (see the Prerequisites note above).
 
-The working tree must be clean. The script:
+The working tree must be clean. Both `new-project.sh` and `remove-sample.sh`
+refuse to run if this repo's `origin` remote is still the canonical
+`github.com/CarlNaddy/dotnetskills` — a project created via "Use this
+template" always gets its own new `origin`, so this only ever fires if
+you're accidentally in the template repo itself, not a project made from it
+(bypass with `I_UNDERSTAND_THIS_IS_THE_TEMPLATE=1`, template-maintenance
+only). The script:
 
 - replaces the `dotnetskills` identifier in every tracked text file
   (namespaces, usings, `_Imports.razor`, `.slnx`, launch profiles, …);
@@ -168,7 +174,8 @@ agent guidance after CLI upgrades.
 ## Step 8 — Commit
 
 ```bash
-git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh docs/new-project.md   # templating helpers
+git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh \
+  scripts/_guard-not-template.sh docs/new-project.md   # templating helpers
 git add -A
 git commit -m "Initialize from template"
 ```
@@ -186,5 +193,5 @@ git commit -m "Initialize from template"
 | `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/_find-git-bash.ps1`, `scripts/check-plugins.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
 
 Remove by hand once set up: `scripts/new-project.sh`, `scripts/new-project.ps1`,
-`scripts/remove-sample.sh`, `docs/new-project.md`. Rewrite: `CLAUDE.md` title +
-"Reuse" section, `README.md` stub.
+`scripts/remove-sample.sh`, `scripts/_guard-not-template.sh`, `docs/new-project.md`.
+Rewrite: `CLAUDE.md` title + "Reuse" section, `README.md` stub.

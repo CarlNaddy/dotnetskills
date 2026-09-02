@@ -68,7 +68,8 @@ tests) but no domain code, like `rails new`.
    dotnet watch run           # http://localhost:5xxx  →  Home
    ```
 5. Make `CLAUDE.md` yours.
-6. `git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh docs/new-project.md`,
+6. `git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh
+   scripts/_guard-not-template.sh docs/new-project.md`,
    then commit. Keep `scripts/update-from-template.sh`, `docs/updating-from-template.md`
    and `.template-version` — they let you pull later template changes.
 

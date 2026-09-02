@@ -11,6 +11,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# shellcheck source=_guard-not-template.sh
+. "$ROOT/scripts/_guard-not-template.sh"
+guard_not_template_repo
+
 ns="$(sed -nE 's/^namespace (.+)\.Data;.*/\1/p' Data/AppDbContext.cs | head -1)"
 [ -n "$ns" ] || { echo "could not read the root namespace from Data/AppDbContext.cs" >&2; exit 1; }
 

@@ -50,8 +50,7 @@ The working tree must be clean. The script:
   `tests/dotnetskills.Tests/` → `tests/Acme.Portal.Tests/`;
 - regenerates `<UserSecretsId>`;
 - resets `README.md` to a short project stub;
-- deletes this repo's history docs (`rails-parity-plan.md`,
-  `rails-parity-assessment.md`, `setup-log.md`);
+- deletes this repo's history docs (`rails-parity-plan.md`, `setup-log.md`);
 - **removes the `Listing` sample feature** (`scripts/remove-sample.sh`) unless
   `--with-sample` — deletes `Components/Pages/Listings/`, `Data/Listing.cs`,
   `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs`; empties `AppDbContext`;

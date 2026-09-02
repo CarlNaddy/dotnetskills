@@ -133,5 +133,5 @@ deterministic across machines and over time.
 ## Roadmap
 
 This repo is being brought to Ruby on Rails-level developer productivity through
-a phased plan — see [`docs/rails-parity-plan.md`](docs/rails-parity-plan.md) and
-the [assessment](docs/rails-parity-assessment.md).
+a phased plan — see [`docs/rails-parity-plan.md`](docs/rails-parity-plan.md)
+(status summary + phased task list).

@@ -5,10 +5,12 @@ using dotnetskills.Data.Seed;
 using dotnetskills.Endpoints;
 using dotnetskills.Features.Email;
 using dotnetskills.Features.Jobs;
+using dotnetskills.Features.Listings;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 
@@ -131,6 +133,27 @@ builder.Services.AddHangfire(config => config
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<ListingJobs>();
 
+// Caching + rate limiting (parity plan P4.3), all first-party. HybridCache
+// sits in front of the DB for the read-only Listings API; a Redis
+// IDistributedCache backplane is (vNext) — this is in-memory only, added
+// when the app runs more than one instance. See docs/caching.md.
+builder.Services.AddHybridCache();
+builder.Services.AddScoped<ListingQueries>();
+
+builder.Services.AddOutputCache(options =>
+    options.AddPolicy("Listings", policy => policy.Expire(TimeSpan.FromSeconds(30))));
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("Api", policy =>
+    {
+        policy.PermitLimit = 5;
+        policy.Window = TimeSpan.FromSeconds(10);
+        policy.QueueLimit = 0;
+    });
+});
+
 var app = builder.Build();
 
 // `dotnet run -- seed`: apply migrations + seed sample data, then exit.
@@ -154,8 +177,12 @@ app.UseRequestLocalization(localizationOptions);
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.UseRateLimiter();
+app.UseOutputCache();
+
 app.MapCultureEndpoints();
 app.MapAccountEndpoints();
+app.MapListingsApiEndpoints();
 app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireDashboardAuthorizationFilter()],

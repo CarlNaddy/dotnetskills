@@ -401,10 +401,18 @@ then the manual follow-up. Full walkthrough, verified end-to-end:
 [`docs/new-project.md`](docs/new-project.md). A real `dotnet new` template — the
 `rails new` equivalent — is parity plan **P7.2**.
 
-`docs/rails-parity-*.md` and `docs/setup-log.md` are this repo's history and the
-script deletes them. `docs/ef-migrations.md` is kept (its conventions apply to
-any project). `scripts/new-project.sh` and `docs/new-project.md` are removed by
-hand once the new project is set up.
+`docs/rails-parity-plan.md` and `docs/setup-log.md` are this repo's history and
+the script deletes them. `docs/ef-migrations.md` is kept (its conventions apply
+to any project). `scripts/new-project.sh` and `docs/new-project.md` are removed
+by hand once the new project is set up.
+
+`scripts/new-project.sh` and `scripts/remove-sample.sh` (the latter runnable
+standalone too) both refuse to run — via a shared `scripts/_guard-not-template.sh`
+— if this repo's `origin` remote is still the canonical
+`github.com/CarlNaddy/dotnetskills`: a project created the documented way (GitHub's
+"Use this template", then clone *that* new repo) never has this origin, only the
+template repo itself does, so the check only ever fires by mistake. Bypass with
+`I_UNDERSTAND_THIS_IS_THE_TEMPLATE=1`, for genuine template-maintenance work only.
 
 `new-project.sh` records the template commit it branched from in
 `.template-version`; a spun-off project pulls later template changes with

@@ -1,11 +1,17 @@
-# Local development infrastructure.
-#   docker compose up -d db mail # start Postgres + the mail sink before `dotnet watch run`
-#   docker compose down          # stop (Postgres data survives in the named volume)
-#   docker compose down -v       # stop and wipe the database
+# Local development infrastructure — and, since P5.2, the full stack.
+#   docker compose up -d db mail    # just infra, for `dotnet watch run` on the host
+#   bash scripts/run-stack.sh       # the whole thing in one command (builds + runs `app` too)
+#   docker compose down             # stop (Postgres data survives in the named volume)
+#   docker compose down -v          # stop and wipe the database
 #
-# The app itself is not containerised here yet — that's rails-parity plan
-# P5.2. Dev connection string goes in user-secrets (plan P1.3), not in
-# appsettings; email defaults to this mail sink with no config needed (P4.2).
+# `app` uses the image `dotnet publish -t:PublishContainer` builds (P5.1,
+# dotnetskills.csproj) — not a Dockerfile `build:` section, so the image must
+# already exist locally before `docker compose up` includes it; run
+# scripts/run-stack.sh instead of a bare `docker compose up` to get both
+# steps as one command. Dev connection string for the *host* dev loop
+# (`dotnet watch run`) goes in user-secrets (plan P1.3), not here; `app`
+# itself gets its connection string as a plain env var below — fine for
+# local dev, see docs/deployment.md for the prod-secrets story (P5.4).
 
 services:
   db:
@@ -35,6 +41,26 @@ services:
     ports:
       - "5001:80"   # web UI
       - "2525:25"   # SMTP
+
+  # The app itself (parity plan P5.2) — built by scripts/run-stack.sh via
+  # `dotnet publish -t:PublishContainer` (P5.1), not built here. Talks to
+  # `db`/`mail` by their service names, not localhost — a different network
+  # namespace than the host-side dev loop uses.
+  app:
+    image: dotnetskills:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      mail:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=dotnetskills;Username=dotnetskills;Password=dev_only_change_me"
+      Email__Host: mail
+      Email__Port: "25"
+    ports:
+      - "8080:8080"
 
 volumes:
   pgdata:

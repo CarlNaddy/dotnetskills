@@ -14,12 +14,14 @@ worked CRUD example.
 | UI | MudBlazor (no Bootstrap/Tailwind) |
 | Data | EF Core 10 + PostgreSQL (Npgsql), migrations, `dotnet run -- seed` |
 | Tests | xUnit v3 on the Microsoft Testing Platform |
-| Local infra | `compose.yaml` (PostgreSQL) |
+| Local infra | `compose.yaml` (PostgreSQL + a dev mail sink) |
 
 Also included: central package management, analyzers-as-errors + `.editorconfig`,
 EF migration conventions (`docs/ef-migrations.md`), ASP.NET Core Identity with
 config-gated Google/Microsoft/GitHub sign-in (setup:
-`docs/external-login.md`), an `en`/`de` localization
+`docs/external-login.md`), confirm-before-login + forgot/reset password email
+via MailKit (`docs/email.md`), background jobs via Hangfire
+(`docs/background-jobs.md`), an `en`/`de` localization
 scaffold, and a worked reference feature — `Listing` CRUD end to end
 (entity → migration → MudBlazor grid/form/dialog → seed data).
 

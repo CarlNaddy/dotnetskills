@@ -17,6 +17,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Data access | EF Core 10 + **PostgreSQL** (Npgsql), all environments; wired (parity plan P1) |
 | Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages, `Listing` policy/role authorization, dev admin seed, external OAuth2 (Google/Microsoft/GitHub) all done (parity plan P3.1–P3.6) |
 | Background jobs | Hangfire, storage in the app's own PostgreSQL (own `hangfire` schema, not an EF Core migration); `/hangfire` dashboard gated to the `Admin` role (parity plan P4.1) |
+| Email | MailKit via ASP.NET Core Identity's `IEmailSender<TUser>`; Razor-component templates rendered by `HtmlRenderer`; dev sink `smtp4dev` (`compose.yaml`); confirm-before-login + forgot/reset password wired (parity plan P4.2) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -98,9 +99,12 @@ Full render-mode × auth matrix and pitfalls: `dotnet-blazor:configure-auth`.
   `Admin!23456`. Outside Development a `Seed:AdminPassword` **must** be supplied
   — the seeder throws rather than use the built-in default.
 - **Identity UI:** hand-authored Razor pages under `Components/Account/`
-  (`Pages/Register.razor`, `Pages/Login.razor`, `Pages/Manage/Index.razor`).
-  The stock Identity UI Razor Class Library ships Bootstrap markup and is
-  excluded by the "all UI is MudBlazor" rule.
+  (`Pages/Register.razor`, `Pages/Login.razor`, `Pages/Manage/Index.razor`,
+  plus `ConfirmEmail.razor` / `ForgotPassword.razor` / `ResetPassword.razor`
+  from P4.2 — see "Email" below). The stock Identity UI Razor Class Library
+  ships Bootstrap markup and is excluded by the "all UI is MudBlazor" rule.
+  `Register.razor` no longer signs the user in immediately — confirm-before-login
+  is on (P4.2).
 - **The one MudBlazor exception — form inputs:** Identity pages use **native**
   `InputText` / `InputCheckbox` / `ValidationMessage` for bound fields, styled
   with the `.account-input` / `.account-validation` classes in `wwwroot/app.css`
@@ -185,6 +189,45 @@ never touches it. Decisions, the worked pattern, and how to add a new job:
   P2.3 way, against real Postgres via `DatabaseTest`
   (`tests/dotnetskills.Tests/Features/Jobs/ListingJobsTests.cs` is the worked
   example). Don't test Hangfire's own scheduling/dispatch.
+
+## Email
+
+**MailKit**, behind ASP.NET Core Identity's own `IEmailSender<TUser>` seam —
+no first-party mail-sending library exists, so this is net-new (parity plan
+**P4.2**), but the *hook point* Identity's scaffolded pages use is first-party.
+Templates are Razor **components** (this app is Blazor, not MVC — no
+`IRazorViewEngine` to reuse), rendered to HTML strings by
+`Microsoft.AspNetCore.Components.Web.HtmlRenderer` (first-party, .NET 8+, the
+official way to render a component outside a request). Dev sink: **smtp4dev**
+(`compose.yaml` service `mail`, web UI at `http://localhost:5001`) — zero
+config needed, `EmailOptions`' defaults already point at it. Decisions, the
+worked pattern, and how to add a new email:
+[`docs/email.md`](docs/email.md).
+
+- `Program.cs`: `AddIdentityCore<ApplicationUser>(o => o.SignIn.RequireConfirmedAccount
+  = true)` — a registered user must confirm their email before signing in;
+  `SignInManager` returns `SignInResult.NotAllowed` automatically, which
+  `Login.razor` gives its own message. External logins and the dev admin seed
+  are unaffected — both already set `EmailConfirmed = true` (P3.4/P3.6).
+- **Confirmation flow:** `Register.razor` no longer signs in immediately —
+  it generates a confirmation token, sends it via
+  `EmailSender.SendConfirmationLinkAsync`, and shows a "check your email"
+  message. `Components/Account/Pages/ConfirmEmail.razor` completes it when
+  the link is clicked.
+- **Password reset flow:** `ForgotPassword.razor` → `SendPasswordResetLinkAsync`
+  → `ResetPassword.razor` → `ResetPasswordConfirmation.razor`. Same
+  anti-enumeration behavior as stock Identity — the same message shows
+  whether or not the email was found.
+- `Features/Email/MailKitEmailSender.cs` implements all three
+  `IEmailSender<TUser>` methods (confirmation link, reset link, reset code);
+  this app's own UI only exercises the first two — the code-entry variant is
+  implemented for interface completeness (an API/mobile client would use it),
+  not driven by a page here.
+- **Testing:** `RazorEmailRenderer` is pure and deterministic (no SMTP, no
+  database) — tested directly
+  (`tests/dotnetskills.Tests/Features/Email/RazorEmailRendererTests.cs`).
+  Don't test MailKit's own SMTP behavior; the full send path was verified
+  manually end-to-end (see `docs/email.md`), not as an automated test.
 
 ## Claude Code plugins & skills
 

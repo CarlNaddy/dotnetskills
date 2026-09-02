@@ -1,11 +1,11 @@
 # Local development infrastructure.
-#   docker compose up -d db      # start PostgreSQL before `dotnet watch run`
-#   docker compose down          # stop (data survives in the named volume)
+#   docker compose up -d db mail # start Postgres + the mail sink before `dotnet watch run`
+#   docker compose down          # stop (Postgres data survives in the named volume)
 #   docker compose down -v       # stop and wipe the database
 #
-# The app itself is not containerised here yet — that (plus a mail sink) is
-# added in rails-parity plan P5.2. Dev connection string goes in user-secrets
-# (plan P1.3), not in appsettings.
+# The app itself is not containerised here yet — that's rails-parity plan
+# P5.2. Dev connection string goes in user-secrets (plan P1.3), not in
+# appsettings; email defaults to this mail sink with no config needed (P4.2).
 
 services:
   db:
@@ -24,6 +24,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Dev SMTP sink (parity plan P4.2) — catches every outgoing email instead of
+  # delivering it. Web UI at http://localhost:5001 to read what was "sent".
+  # EmailOptions' defaults (Features/Email/EmailOptions.cs — see
+  # docs/email.md) already point at this: localhost:2525, no auth.
+  mail:
+    image: rnwood/smtp4dev:v3
+    restart: unless-stopped
+    ports:
+      - "5001:80"   # web UI
+      - "2525:25"   # SMTP
 
 volumes:
   pgdata:

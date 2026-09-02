@@ -26,12 +26,12 @@ how). On testing and type safety the setup is **ahead of Rails**.
 (caching + rate limiting), and P4.4 (file storage) all done; P4.5 (real-time)
 stays open only conditionally — the plan itself gates it on a feature
 actually needing it, and none currently does; P4.6 (observability) is
-deferred to vNext.** **P5 (deployment) is underway too — P5.1 (container
-image) and P5.2 (full local stack) done; P5.3 (CI/CD to a live target) needs
-a hosting decision and real credentials, not something to pick unilaterally;
-P5.4 (production hardening) is next in line.** P4 is the half where Rails'
-"it's already there" advantage is structural: no first-party library and no
-Claude Code skill covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
+deferred to vNext.** **P5 (deployment) is nearly done — P5.1 (container
+image), P5.2 (full local stack), and P5.4 (production hardening) done; only
+P5.3 (CI/CD to a live target) remains, blocked on a hosting decision and
+real credentials, not something to pick unilaterally.** P4 is the half where
+Rails' "it's already there" advantage is structural: no first-party library
+and no Claude Code skill covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
 per item); P5 follows standard Microsoft container/CI guidance.
 
@@ -45,7 +45,7 @@ per item); P5 follows standard Microsoft container/CI guidance.
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
 | 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1), email (MailKit, P4.2), caching/rate limiting (first-party, P4.3), and file storage (`IFileStore`, P4.4) done; real-time open (P4.5, only if a feature needs it) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
-| 7 | One-command local stack + one deploy pipeline | 🟡 `bash scripts/run-stack.sh` — app + Postgres + mail sink, one command (P5.1–P5.2); CI/CD to a live target + prod hardening open (P5.3–P5.4) |
+| 7 | One-command local stack + one deploy pipeline | 🟡 `bash scripts/run-stack.sh` — app + Postgres + mail sink, one command; persisted Data Protection keys + health checks (P5.1–P5.2, P5.4); CI/CD to a live target needs a hosting decision (P5.3) |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
 
 ### Rails capability → where this stack lands
@@ -64,7 +64,7 @@ definition, or without a direct scorecard line):
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
 | ActiveStorage (files + variants) | ✅ `IFileStore` abstraction, `LocalDiskFileStore` + config-driven provider switch, worked pattern `Listing` photos, ingest via `minimal-api-file-upload` conventions (P4.4). No variants/transforms (Rails' image processing) — not asked for |
 | Fragment / Russian-doll caching | ✅ `HybridCache` (in-memory) + `OutputCache` + `AddRateLimiter`, all first-party, fronting the `Listings` JSON API; Redis distributed backplane vNext (P4.3) |
-| Deploy (Kamal / Heroku one-liner) | 🟡 `dotnet publish -t:PublishContainer` + `bash scripts/run-stack.sh` = one-command local full stack (P5.1–P5.2); CI/CD to a live target needs a hosting decision (P5.3), prod hardening open (P5.4) |
+| Deploy (Kamal / Heroku one-liner) | 🟡 `dotnet publish -t:PublishContainer` + `bash scripts/run-stack.sh` = one-command local full stack; persisted Data Protection keys, `/health`+`/alive`, forwarded-headers (P5.1–P5.2, P5.4); CI/CD to a live target needs a hosting decision (P5.3) |
 | Admin panel (ActiveAdmin) | ⚠️ `MudDataGrid` + `create-datadriven` gets you there by generation |
 | Observability | ⚠️ built-in `ILogger` now; health checks + OpenTelemetry deferred (P4.6 / vNext) |
 
@@ -806,10 +806,47 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
 - [ ] **P5.3** CI/CD pipeline (GitHub Actions): restore → build → test → publish →
   deploy; one target (Azure Container Apps / App Service / Fly.io / self-host).
   _Skill:_ — · _Accept:_ green pipeline deploys to a live environment.
-- [ ] **P5.4** Production hardening: HTTPS, persisted Data Protection keys,
+- [x] **P5.4** Production hardening: HTTPS, persisted Data Protection keys,
   secrets via env / key vault, `/health` + `/alive` health checks
   (`Microsoft.Extensions.Diagnostics.HealthChecks`). _Skill:_ — · _Accept:_
   `/health` returns 200; auth cookies survive an app restart.
+  _Done:_ **Data Protection keys persist in Postgres** —
+  `AppDbContext : IDataProtectionKeyContext` (+migration, `DataProtectionKeys`
+  table); `AddDataProtection().SetApplicationName("dotnetskills")
+  .PersistKeysToDbContext<AppDbContext>()`. Fixes the exact gap the P5.1
+  verification surfaced — the in-memory default regenerates a key ring on
+  every restart, silently invalidating every auth cookie/antiforgery token.
+  `SetApplicationName` needed because the host dev loop and the container
+  have different `ContentRootPath`s, which Data Protection otherwise folds
+  into the key ring's identity. Persistence only, not encryption-at-rest —
+  the "No XML encryptor configured" warning still prints correctly;
+  encrypting the keys needs real KMS/certificate infra, same category of gap
+  as P5.3, documented rather than faked. **`/health`** (every check —
+  `"self"` + `AddDbContextCheck<AppDbContext>()`, readiness) and
+  **`/alive`** (only `"live"`-tagged — just `"self"`, no dependencies,
+  liveness) — the MS-documented split for orchestrators that probe the two
+  differently. **`UseForwardedHeaders`** before `UseHttpsRedirection`
+  (containerized deploys terminate TLS at the ingress layer, not
+  in-process — without this, `UseHttpsRedirection` redirect-loops behind a
+  TLS-terminating proxy), `KnownIPNetworks`/`KnownProxies` deliberately
+  cleared (the default only trusts loopback, a no-op behind a real cloud
+  load balancer). **Secrets via env/key vault** — already the pattern
+  (connection string P1.3, OAuth P3.4, seed admin password P3.6); P5.4
+  confirmed it covers Data Protection and health checks too (neither needs
+  a new secret). Convention doc: `docs/deployment.md`'s P5.4 section;
+  `CLAUDE.md`'s Deployment section extended.
+  **Verified end-to-end, the actual claim, not just configuration:**
+  against the running `run-stack.sh` stack, logged in as the seeded admin
+  via `curl` (real cookie) → `/Account/Manage` 200 → `docker compose
+  restart app` (a real container restart) → replayed the exact same
+  pre-restart cookie → still 200, still the admin's own account page. An
+  unauthenticated request after the restart still correctly redirects
+  (302) — persistence didn't weaken the auth boundary. App logs show real
+  `SELECT`/`INSERT` traffic against `DataProtectionKeys` (keys genuinely
+  persisting). `/health` and `/alive` both 200 before and after the
+  restart. `dotnet test` → 29/29 (unchanged — no test-covered code path
+  touched), clean build with analyzers, `dotnet format --verify-no-changes`
+  clean.
 
 ### P6 — Lower stakes
 

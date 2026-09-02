@@ -21,7 +21,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Caching / rate limiting | First-party only: `HybridCache` (in-memory, in front of the `Listings` JSON API), `OutputCache`, `AddRateLimiter`; a Redis `IDistributedCache` backplane is vNext (parity plan P4.3) |
 | File storage | `IFileStore` seam, `LocalDiskFileStore` today, config-driven provider switch for a blob provider later; worked pattern is a `Listing` photo (parity plan P4.4) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
-| Deployment | SDK container publish (`dotnet publish -t:PublishContainer`, no Dockerfile); `bash scripts/run-stack.sh` = full local stack in one command (parity plan P5.1–P5.2); CI/CD + prod hardening open (P5.3–P5.4) |
+| Deployment | SDK container publish (`dotnet publish -t:PublishContainer`, no Dockerfile); `bash scripts/run-stack.sh` = full local stack in one command; Data Protection keys in Postgres, `/health` + `/alive` (parity plan P5.1–P5.2, P5.4); CI/CD to a live target open (P5.3) |
 
 ## Build / run / test
 
@@ -321,10 +321,37 @@ verification notes: [`docs/deployment.md`](docs/deployment.md).
   (`docker compose run --rm app seed` — reaches the same `dotnet run --
   seed` verb dispatch via the image's exec-form `ENTRYPOINT`). `--down`
   stops everything; `--no-seed` skips the seed step.
+- **Production hardening (P5.4):**
+  - **Data Protection keys persist in Postgres** — `AppDbContext` implements
+    `IDataProtectionKeyContext`; `AddDataProtection().SetApplicationName(...)
+    .PersistKeysToDbContext<AppDbContext>()` in `Program.cs`. Without this,
+    the in-memory default regenerates a fresh key ring on every restart,
+    silently invalidating every auth cookie and antiforgery token — no
+    error, just users logged out after every deploy. `SetApplicationName` is
+    required because the host dev loop and the container have different
+    `ContentRootPath`s, which Data Protection otherwise folds into the key
+    ring's identity. Persistence, not encryption-at-rest — the "No XML
+    encryptor configured" warning still prints and still should; encrypting
+    the keys themselves needs real KMS/certificate infrastructure, the same
+    category of gap as P5.3.
+  - **`/health`** (every check, incl. `AddDbContextCheck<AppDbContext>()` —
+    readiness) and **`/alive`** (only `"live"`-tagged checks, no
+    dependencies — liveness) — the MS-documented split for container
+    orchestrators that probe the two differently.
+  - **`UseForwardedHeaders`**, before `UseHttpsRedirection` — a
+    containerized deploy terminates TLS at the ingress/proxy layer, not
+    in-process; without this the app never sees the original request as
+    HTTPS and `UseHttpsRedirection` would redirect-loop behind a
+    TLS-terminating proxy. Deliberately clears `KnownIPNetworks`/`KnownProxies`
+    (the default only trusts loopback, a silent no-op behind a real cloud
+    load balancer) — the platform's own network boundary is what enforces
+    trust here, not an IP allowlist.
+  - **Secrets via env/key vault** were already the pattern (connection
+    string P1.3, OAuth secrets P3.4, seed admin password P3.6) — P5.4
+    confirmed it covers the two things it itself added too (Data Protection
+    needs no secret; health checks expose none).
 - **Open:** P5.3 (CI/CD to a live target) needs an actual hosting decision
-  and real credentials — not something to pick unilaterally. P5.4
-  (production hardening) is next in line — the P5.1 verification run
-  already surfaced the exact Data Protection warning it fixes.
+  and real credentials — not something to pick unilaterally.
 
 ## Claude Code plugins & skills
 

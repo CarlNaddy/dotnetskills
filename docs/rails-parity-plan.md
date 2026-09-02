@@ -22,8 +22,8 @@ authorize users — all without leaving the toolchain. **P0–P3 and P7 are
 complete** (see the phase checklists below for exactly what was verified and
 how). On testing and type safety the setup is **ahead of Rails**.
 
-**P4 (batteries) is underway — P4.1 (background jobs) and P4.2 (email) done;
-P4.3–P4.6 and P5 (deployment) remain.** This is the half where Rails' "it's already there"
+**P4 (batteries) is underway — P4.1 (background jobs), P4.2 (email), and P4.3
+(caching + rate limiting) done; P4.4–P4.6 and P5 (deployment) remain.** This is the half where Rails' "it's already there"
 advantage is structural: no first-party library and no Claude Code skill
 covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
@@ -37,7 +37,7 @@ per item); P5 follows standard Microsoft container/CI guidance.
 | 2 | One-pass CRUD scaffold | ✅ close (agent-driven, proven by `Listing`) |
 | 3 | One-command seed on fresh clone | ✅ at parity |
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
-| 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1) and email (MailKit, P4.2) done; cache/file-storage/real-time open (P4.3–P4.5) |
+| 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1), email (MailKit, P4.2), and caching/rate limiting (first-party, P4.3) done; file-storage/real-time open (P4.4–P4.5) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
 | 7 | One-command local stack + one deploy pipeline | 🟡 local DB only; app stack + CI/CD open (P5) |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
@@ -57,7 +57,7 @@ definition, or without a direct scorecard line):
 | ActiveJob + Sidekiq | ✅ Hangfire, storage in the app's own Postgres, `/hangfire` dashboard gated to `Admin` (P4.1) |
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
 | ActiveStorage (files + variants) | ⚠️ `minimal-api-file-upload` = ingest endpoint only, no storage abstraction (P4.4) |
-| Fragment / Russian-doll caching | ❌ no wiring for `OutputCache` / `HybridCache` / rate limiting (P4.3) |
+| Fragment / Russian-doll caching | ✅ `HybridCache` (in-memory) + `OutputCache` + `AddRateLimiter`, all first-party, fronting the `Listings` JSON API; Redis distributed backplane vNext (P4.3) |
 | Deploy (Kamal / Heroku one-liner) | ❌ no app container / publish target, no full-stack `compose.yaml`, no CI/CD (P5) |
 | Admin panel (ActiveAdmin) | ⚠️ `MudDataGrid` + `create-datadriven` gets you there by generation |
 | Observability | ⚠️ built-in `ILogger` now; health checks + OpenTelemetry deferred (P4.6 / vNext) |
@@ -668,13 +668,38 @@ test-*data* convention.
   `RazorEmailRendererTests` (2 tests, pure/deterministic — no SMTP, no DB)
   pass. `dotnet test` → 20/20 (was 18), clean build with analyzers, `dotnet
   format --verify-no-changes` clean.
-- [ ] **P4.3** Caching + rate limiting, all first-party: `HybridCache` /
+- [x] **P4.3** Caching + rate limiting, all first-party: `HybridCache` /
   `IMemoryCache` (in-memory — no distributed cache yet), `OutputCache` on suitable
   endpoints, and the built-in `AddRateLimiter` middleware (.NET 7+). A **Redis**
   `IDistributedCache` backplane is **(vNext)** — add it only when the app runs
   more than one instance (it then also becomes the SignalR backplane and Data
   Protection key store). _Skill:_ — · _Accept:_ demonstrated cache hit path;
   limiter returns 429 under load.
+  _Done:_ every piece **first-party** — no library-choice decision needed,
+  unlike the rest of P4. New, self-contained surface built to demonstrate
+  it: `Endpoints/ListingsApiEndpoints.cs` (`GET /api/listings`,
+  `GET /api/listings/{id}`, public/unauthenticated, same public-read story
+  as P3.5) backed by `Features/Listings/ListingQueries.cs`
+  (`HybridCache`-wrapped, tag-based invalidation) — doesn't touch the
+  existing Blazor `Listings`/`ListingDetails` pages, which keep reading
+  `AppDbContext` directly. `AddOutputCache` (30s `"Listings"` policy) +
+  `AddRateLimiter` (5 req/10s fixed-window `"Api"` policy) applied to the
+  group. `UseRateLimiter()` before `UseOutputCache()` in the pipeline — order
+  matters, or a cached response could bypass the limiter.
+  `ListingQueries.InvalidateAsync()` wired into all three `Listing` write
+  points (`ListingCreate.razor`, `ListingEdit.razor`, `Listings.razor`
+  delete). Convention doc: [`docs/caching.md`](caching.md); `CLAUDE.md` has a
+  "Caching + rate limiting" section + Stack row.
+  **Verified end-to-end** against the real Docker Postgres, a running
+  `dotnet run`, real `curl`: `GET /api/listings` returns real seeded data;
+  the `Age` response header goes `0` → `1` on a repeated request one second
+  later — the framework's own signal the second request was served from the
+  output cache, never reaching the handler; 8 rapid requests against the
+  5-per-10s limiter → first 5 return `200`, the rest `429`, exactly the
+  configured limit. `ListingQueriesTests` (2 tests, Testcontainers-backed,
+  P2.3 pattern) prove both caching *and* invalidation against real Postgres.
+  `dotnet test` → 22/22 (was 20), clean build with analyzers, `dotnet format
+  --verify-no-changes` clean.
 - [ ] **P4.4** File storage (ActiveStorage analog): `IFileStore` abstraction with
   a local-disk implementation now, blob (Azure/S3) later; ingest via
   `minimal-api-file-upload`. _Skill:_ `minimal-api-file-upload` · _Accept:_ upload

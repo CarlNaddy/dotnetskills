@@ -1,6 +1,8 @@
 @page "/listings/{Id:int}/edit"
 @attribute [Authorize(Policy = "ListingsWriter")]
+@using dotnetskills.Features.Listings
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ListingQueries ListingQueries
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
@@ -46,6 +48,9 @@ else
         await using var db = await DbFactory.CreateDbContextAsync();
         db.Listings.Update(_model!);
         await db.SaveChangesAsync();
+
+        // P4.3: invalidate the API's cached reads — see ListingCreate.razor.
+        await ListingQueries.InvalidateAsync();
 
         Snackbar.Add("Changes saved.", Severity.Success);
         Nav.NavigateTo($"/listings/{Id}");

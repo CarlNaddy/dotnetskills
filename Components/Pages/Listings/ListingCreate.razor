@@ -1,9 +1,11 @@
 @page "/listings/new"
 @attribute [Authorize(Policy = "ListingsWriter")]
 @using dotnetskills.Features.Jobs
+@using dotnetskills.Features.Listings
 @using Hangfire
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IBackgroundJobClient BackgroundJobs
+@inject ListingQueries ListingQueries
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
@@ -29,6 +31,10 @@
         // doesn't wait on it; ListingJobs.RecordListingCreatedAsync runs on
         // the Hangfire server, out of this request.
         BackgroundJobs.Enqueue<ListingJobs>(job => job.RecordListingCreatedAsync(_model.Id, CancellationToken.None));
+
+        // P4.3: the API's cached reads (Endpoints/ListingsApiEndpoints.cs) would
+        // otherwise serve stale data until the cache entry's own expiry.
+        await ListingQueries.InvalidateAsync();
 
         Snackbar.Add($"Listing \"{_model.Title}\" created.", Severity.Success);
         Nav.NavigateTo($"/listings/{_model.Id}");

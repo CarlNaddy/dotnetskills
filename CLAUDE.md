@@ -18,6 +18,7 @@ ASP.NET Core + **Blazor Web App** with **MudBlazor** for all UI.
 | Auth | ASP.NET Core Identity (cookie), EF Core stores in `AppDbContext`; Register/Login/Manage pages, `Listing` policy/role authorization, dev admin seed, external OAuth2 (Google/Microsoft/GitHub) all done (parity plan P3.1–P3.6) |
 | Background jobs | Hangfire, storage in the app's own PostgreSQL (own `hangfire` schema, not an EF Core migration); `/hangfire` dashboard gated to the `Admin` role (parity plan P4.1) |
 | Email | MailKit via ASP.NET Core Identity's `IEmailSender<TUser>`; Razor-component templates rendered by `HtmlRenderer`; dev sink `smtp4dev` (`compose.yaml`); confirm-before-login + forgot/reset password wired (parity plan P4.2) |
+| Caching / rate limiting | First-party only: `HybridCache` (in-memory, in front of the `Listings` JSON API), `OutputCache`, `AddRateLimiter`; a Redis `IDistributedCache` backplane is vNext (parity plan P4.3) |
 | Tests | xUnit v3 on the Microsoft Testing Platform — `tests/dotnetskills.Tests/` |
 
 ## Build / run / test
@@ -228,6 +229,36 @@ worked pattern, and how to add a new email:
   (`tests/dotnetskills.Tests/Features/Email/RazorEmailRendererTests.cs`).
   Don't test MailKit's own SMTP behavior; the full send path was verified
   manually end-to-end (see `docs/email.md`), not as an automated test.
+
+## Caching + rate limiting
+
+**All first-party** — `HybridCache`, `OutputCache`, `AddRateLimiter`; no
+third-party library or seam decision needed here, unlike the rest of P4
+(parity plan **P4.3**). In-memory only; a Redis `IDistributedCache` backplane
+is **(vNext)**, added only when the app runs more than one instance.
+Decisions and the worked pattern: [`docs/caching.md`](docs/caching.md).
+
+- **Scope:** the cache sits in front of the new, self-contained
+  `Endpoints/ListingsApiEndpoints.cs` (`GET /api/listings`,
+  `GET /api/listings/{id}`, public/unauthenticated, same "public to read"
+  story as the Blazor pages, P3.5) via `Features/Listings/ListingQueries.cs`
+  — it does **not** touch the existing Blazor `Listings`/`ListingDetails`
+  pages, which keep reading `AppDbContext` directly.
+- `Program.cs`: `AddHybridCache()`, `AddOutputCache` with a 30s `"Listings"`
+  policy, `AddRateLimiter` with a 5-requests/10-seconds fixed-window `"Api"`
+  policy. **Middleware order matters** — `UseRateLimiter()` before
+  `UseOutputCache()`, or a cached response could bypass the limiter.
+- **Cache invalidation** (`ListingQueries.InvalidateAsync`, tag-based) is
+  called from all three write points that touch `Listing`:
+  `ListingCreate.razor`, `ListingEdit.razor`, `Listings.razor`'s delete
+  handler. A cache with no invalidation path ships stale data — don't add a
+  cached read without also wiring its invalidation.
+- **Testing:** `ListingQueriesTests`
+  (`tests/dotnetskills.Tests/Features/Listings/`, P2.3 pattern) proves
+  caching *and* invalidation against real Postgres. Don't test the
+  framework's own `HybridCache`/`OutputCache`/`AddRateLimiter` internals —
+  the `Age` header and the rate limiter's `429` were verified manually
+  end-to-end (see `docs/caching.md`).
 
 ## Claude Code plugins & skills
 

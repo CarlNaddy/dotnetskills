@@ -45,10 +45,10 @@ tests) but no domain code, like `rails new`.
 1. On GitHub click **Use this template → Create a new repository**, then clone it.
 2. Rename it (runs `preflight.sh` first):
    ```bash
-   bash scripts/new-project.sh Acme.Portal
+   bash scripts/new-project.sh Contoso.Portal
    ```
    **Windows without Git Bash yet:** `powershell -File scripts/new-project.ps1
-   Acme.Portal` — same script, delegates via Git Bash.
+   Contoso.Portal` — same script, delegates via Git Bash.
 
    Replaces the `dotnetskills` identifier and every `dotnetskills`-named file and
    folder, regenerates the `UserSecretsId`, resets this README, removes the
@@ -59,13 +59,12 @@ tests) but no domain code, like `rails new`.
 3. Point at a database — edit `compose.yaml` (Postgres db/user/password), then:
    ```bash
    dotnet user-secrets set "ConnectionStrings:Default" \
-     "Host=localhost;Port=5432;Database=acmeportal;Username=acmeportal;Password=dev_only_change_me"
+     "Host=localhost;Port=5432;Database=contosoportal;Username=contosoportal;Password=dev_only_change_me"
    ```
 4. Bring it up:
    ```bash
    docker compose up -d db
-   dotnet tool restore
-   dotnet format Acme.Portal.slnx && dotnet build && dotnet test
+   dotnet format Contoso.Portal.slnx && dotnet build && dotnet test
    dotnet watch run           # http://localhost:5xxx  →  Home
    ```
 5. Make `CLAUDE.md` yours.

@@ -2,7 +2,7 @@
 #
 # Turn a fresh copy of this template repo into a new project.
 #
-#   scripts/new-project.sh <NewName>                 e.g.  ... Acme.Portal
+#   scripts/new-project.sh <NewName>                 e.g.  ... Contoso.Portal
 #   scripts/new-project.sh <NewName> --with-sample   keep the Listing CRUD example
 #
 # Runs the preflight check, then:
@@ -134,6 +134,17 @@ if [ "$with_sample" = 0 ]; then
 fi
 
 echo
+echo "==> Restoring local dotnet tools (dotnet-ef)"
+# .config/dotnet-tools.json is generic (no 'dotnetskills' identifier), so this
+# can run any time after the rename. Idempotent (a no-op if already restored)
+# and non-fatal, same reasoning as the AI-tooling install below — preflight.sh
+# already confirmed the .NET 10 SDK is present, so this is a project-level
+# restore, not a missing-prerequisite case.
+tools_note=""
+dotnet tool restore \
+    || tools_note="dotnet tools — 'dotnet tool restore' failed, rerun manually:  dotnet tool restore"
+
+echo
 echo "==> AI tooling — installing Claude Code plugins/skills"
 # .claude/settings.json carries the dotnet*/mudblazor plugin list over unchanged
 # (no 'dotnetskills' identifier in it), so it already declares what this new
@@ -161,7 +172,7 @@ Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample
   3. In the folder containing ${NEW}.csproj:
        dotnet user-secrets set "ConnectionStrings:Default" \\
          "Host=localhost;Port=5432;Database=<db>;Username=<user>;Password=<pw>"
-  4. docker compose up -d db && dotnet tool restore
+  4. docker compose up -d db
   5. dotnet format ${NEW}.slnx && dotnet build && dotnet test
   6. (optional) spec-driven development:  bash scripts/setup-openspec.sh
        then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
@@ -178,4 +189,5 @@ Later, to pull template changes into this project:
      bash scripts/update-from-template.sh             # apply
    See docs/updating-from-template.md.
 EOF
+[ -z "$tools_note" ] || echo "$tools_note"
 [ -z "$ai_note" ] || echo "$ai_note"

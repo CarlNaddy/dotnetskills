@@ -59,7 +59,8 @@ here="$(dirname "$0")"
 if [ ! -f "$here/../.claude/settings.json" ]; then
     warn ".claude/settings.json not found — AI tooling config missing"
 elif ! command -v claude >/dev/null 2>&1; then
-    warn "'claude' CLI not on PATH — open the repo in Claude Code to install plugins"
+    warn "'claude' CLI not on PATH — open the repo in Claude Code to install plugins,"
+    warn "  or install the CLI and run: scripts/check-plugins.sh --fix (headless/CI)"
 elif "$here/check-plugins.sh" >/dev/null 2>&1; then
     ok "Claude Code plugins installed and enabled"
 else

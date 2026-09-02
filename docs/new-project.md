@@ -56,6 +56,9 @@ The working tree must be clean. The script:
   `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs`; empties `AppDbContext`;
   drops the seed dispatch from `Program.cs` and the Listings nav link. A
   placeholder test replaces `ListingTests`.
+- installs the Claude Code plugins/skills declared in `.claude/settings.json`
+  (`bash scripts/check-plugins.sh --fix`) if the `claude` CLI is on PATH — a
+  no-op warning, not a failure, if it isn't;
 - prints the remaining manual steps.
 
 The project **compiles** either way. A skeleton has no entities, migrations, or
@@ -153,9 +156,12 @@ git commit -m "Initialize from template"
 
 ## Step 9 — Claude Code
 
-Open the new repo in Claude Code and accept the marketplace-trust prompts —
-`.claude/settings.json` carries over unchanged, so the same `dotnet*` /
-`mudblazor` plugins and skills apply.
+`scripts/new-project.sh` already ran `check-plugins.sh --fix` for you in Step 2
+if the `claude` CLI was on PATH — `.claude/settings.json` carries over
+unchanged, so the same `dotnet*` / `mudblazor` plugins and skills apply.
+Confirm any time with `bash scripts/check-plugins.sh`. If the CLI wasn't
+available then, install it and run `bash scripts/check-plugins.sh --fix`, or
+just open the repo in Claude Code and accept the marketplace-trust prompt.
 
 ---
 

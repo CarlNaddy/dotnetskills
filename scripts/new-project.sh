@@ -3,30 +3,25 @@
 # Turn a fresh copy of this template repo into a new project.
 #
 #   scripts/new-project.sh <NewName>                 e.g.  ... Contoso.Portal
-#   scripts/new-project.sh <NewName> --with-sample   keep the Listing CRUD example
 #
 # Runs the preflight check, then:
 #   - replaces the identifier `dotnetskills` in tracked text files
 #   - renames every file/directory whose path contains `dotnetskills`
 #   - regenerates the UserSecretsId, resets README.md
 #   - removes this repo's history docs
-#   - removes the Listing sample feature so you start from a clean skeleton
-#     (pass --with-sample to keep it)
+#
+# Keeps the Listing sample feature — it's the worked pattern every P3/P4 doc
+# points at (auth, jobs, caching, file storage), so the renamed project runs
+# and has something to look at immediately. Run `bash scripts/remove-sample.sh`
+# yourself, whenever you're ready, to strip it down to an empty skeleton.
 #
 # Prints the remaining manual steps; full detail in docs/new-project.md.
 
 set -euo pipefail
 
 OLD="dotnetskills"
-NEW=""
-with_sample=0
-for a in "$@"; do
-    case "$a" in
-        --with-sample) with_sample=1 ;;
-        -*) echo "unknown option: $a" >&2; exit 2 ;;
-        *) [ -z "$NEW" ] && NEW="$a" || { echo "unexpected argument: $a" >&2; exit 2; } ;;
-    esac
-done
+NEW="${1:-}"
+[ $# -le 1 ] || { echo "unexpected argument: $2" >&2; exit 2; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -35,7 +30,7 @@ cd "$ROOT"
 . "$ROOT/scripts/_guard-not-template.sh"
 guard_not_template_repo
 
-[ -n "$NEW" ]        || { echo "usage: scripts/new-project.sh <NewName> [--with-sample]" >&2; exit 2; }
+[ -n "$NEW" ]        || { echo "usage: scripts/new-project.sh <NewName>" >&2; exit 2; }
 [ "$NEW" != "$OLD" ] || { echo "name unchanged; nothing to do" >&2; exit 1; }
 
 "$ROOT/scripts/preflight.sh" || exit 1
@@ -83,12 +78,6 @@ new_uuid() {
 NEWID="$(new_uuid)"
 sed -i "s#<UserSecretsId>.*</UserSecretsId>#<UserSecretsId>${NEWID}</UserSecretsId>#" "${NEW}.csproj"
 
-if [ "$with_sample" = 1 ]; then
-    seed_line='dotnet run -- seed        # apply migrations + seed sample data'
-else
-    seed_line='dotnet ef database update # once you add your first model'
-fi
-
 echo "==> Resetting README.md to a project stub"
 cat > README.md <<EOF
 # ${NEW}
@@ -101,10 +90,15 @@ Started from the [dotnetskills](https://github.com/CarlNaddy/dotnetskills) templ
 \`\`\`bash
 docker compose up -d db
 dotnet tool restore
-${seed_line}
+dotnet run -- seed        # apply migrations + seed sample data
 dotnet watch run
 dotnet test
 \`\`\`
+
+Keeping the \`Listing\` sample for now (worked pattern for auth / jobs /
+caching / file storage) — remove it any time with
+\`bash scripts/remove-sample.sh\`; then \`dotnet run -- seed\` above becomes
+\`dotnet ef database update\` (once you add your first model).
 
 Conventions and AI tooling: see \`CLAUDE.md\`.
 EOF
@@ -138,11 +132,6 @@ else
 fi
 git add .template-version 2>/dev/null || true
 
-if [ "$with_sample" = 0 ]; then
-    echo
-    "$ROOT/scripts/remove-sample.sh"
-fi
-
 echo
 echo "==> Restoring local dotnet tools (dotnet-ef)"
 # .config/dotnet-tools.json is generic (no 'dotnetskills' identifier), so this
@@ -173,7 +162,9 @@ fi
 
 cat <<EOF
 
-Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample removed)"). Remaining manual steps:
+Rename done — the \`Listing\` sample feature is still here (it's the worked
+pattern every P3/P4 doc points at: auth, jobs, caching, file storage). Remaining
+manual steps:
 
   1. CLAUDE.md — retitle; replace the "Reuse — starting a new project" section
      and parity-plan references with your own notes. Keep Stack, Data access,
@@ -184,16 +175,22 @@ Rename done$([ "$with_sample" = 0 ] && echo " (clean skeleton — Listing sample
          "Host=localhost;Port=5432;Database=<db>;Username=<user>;Password=<pw>"
   4. docker compose up -d db
   5. dotnet format ${NEW}.slnx && dotnet build && dotnet test
-  6. (optional) spec-driven development:  bash scripts/setup-openspec.sh
+  6. (optional) start from an empty skeleton instead of keeping the sample:
+       bash scripts/remove-sample.sh
+     (regenerates Data/Migrations from scratch — safe any time, doesn't need
+     a real database connection yet)
+  7. (optional) spec-driven development:  bash scripts/setup-openspec.sh
        then, in Claude Code:  /opsx:propose <feature>  ->  /opsx:apply
-  7. Remove the templating helpers you no longer need:
-       git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh \\
+  8. Remove the templating helpers you no longer need:
+       git rm scripts/new-project.sh scripts/new-project.ps1 \\
          scripts/_guard-not-template.sh docs/new-project.md
-     Keep: scripts/preflight.sh, scripts/preflight.ps1, scripts/_find-git-bash.ps1,
-     scripts/check-plugins.sh, scripts/setup-openspec.sh, docs/ef-migrations.md, and
-     — to pull future template updates — scripts/update-from-template.sh,
+     Keep scripts/remove-sample.sh until you've actually run it (or decided to
+     keep the sample for good — then remove it too). Keep: scripts/preflight.sh,
+     scripts/preflight.ps1, scripts/_find-git-bash.ps1, scripts/check-plugins.sh,
+     scripts/setup-openspec.sh, docs/ef-migrations.md, and — to pull future
+     template updates — scripts/update-from-template.sh,
      docs/updating-from-template.md, .template-version.
-  8. git add -A && git commit -m "Initialize from template"
+  9. git add -A && git commit -m "Initialize from template"
 
 Later, to pull template changes into this project:
      bash scripts/update-from-template.sh --dry-run   # preview

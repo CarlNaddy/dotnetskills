@@ -2,7 +2,6 @@
 # this template into a new project without needing a bash shell already.
 #
 #   powershell -File scripts/new-project.ps1 Contoso.Portal
-#   powershell -File scripts/new-project.ps1 Contoso.Portal -WithSample
 #
 # Delegates to the real new-project.sh via Git Bash when found (single
 # source of truth for the actual rename logic); otherwise tells you what to
@@ -10,9 +9,7 @@
 
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [string]$NewName,
-
-    [switch]$WithSample
+    [string]$NewName
 )
 
 . "$PSScriptRoot\_find-git-bash.ps1"
@@ -21,15 +18,11 @@ $bashPath = Find-GitBash
 if (-not $bashPath) {
     Write-NoGitBashHelp
     Write-Host ""
-    $retry = "bash scripts/new-project.sh $NewName"
-    if ($WithSample) { $retry += " --with-sample" }
     Write-Host "After installing, close and reopen your terminal, then re-run this script, or:"
-    Write-Host "  $retry"
+    Write-Host "  bash scripts/new-project.sh $NewName"
     exit 1
 }
 
 $scriptPath = Join-Path $PSScriptRoot 'new-project.sh'
-$bashArgs = @($scriptPath, $NewName)
-if ($WithSample) { $bashArgs += '--with-sample' }
-& $bashPath @bashArgs
+& $bashPath $scriptPath $NewName
 exit $LASTEXITCODE

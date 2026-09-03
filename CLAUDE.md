@@ -628,6 +628,17 @@ the script deletes them. `docs/ef-migrations.md` is kept (its conventions apply
 to any project). `scripts/new-project.sh` and `docs/new-project.md` are removed
 by hand once the new project is set up.
 
+`new-project.sh` **keeps the `Listing` sample feature by default** — it's the
+worked pattern every P3/P4 section above points at, so the renamed project
+runs and has something to look at immediately. `scripts/remove-sample.sh`
+(standalone, safe to run any time — needs no database connection, since
+`dotnet ef migrations add` never opens one) strips it to an empty skeleton:
+deletes the sample's files, surgically trims the `Listing`-specific lines out
+of `AppDbContext.cs` / `Program.cs`, and regenerates `Data/Migrations/` from
+scratch as a single fresh `InitialCreate` — the sample's migrations are
+entangled with the always-kept infra ones (Identity, `JobRun`, `StoredFile`,
+Data Protection keys), so they can't be deleted piecemeal.
+
 `scripts/new-project.sh` and `scripts/remove-sample.sh` (the latter runnable
 standalone too) both refuse to run — via a shared `scripts/_guard-not-template.sh`
 — if this repo's `origin` remote is still the canonical

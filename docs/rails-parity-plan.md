@@ -304,10 +304,11 @@ _Order note: P1.8 was done before P1.6 and P1.7 — both of those need a real
 entity to work against (a column to rename; a row to seed)._
 
 _Scope note: the `Listing` entity + `Components/Pages/Listings/` CRUD live in
-**this repo** as the P1 validation vehicle, the test fixture, and the
-`--with-sample` payload — not as a real-estate product. Projects spun off the
-template get it **stripped by default** (`scripts/remove-sample.sh`), matching
-`rails new`; `scripts/new-project.sh --with-sample` keeps it as a worked pattern._
+**this repo** as the P1 validation vehicle, the test fixture, and the worked
+pattern every later P3/P4 doc points at — not as a real-estate product.
+Projects spun off the template **keep it by default** (matching a full
+`rails new`, not `--minimal`); run `scripts/remove-sample.sh` yourself,
+standalone, any time, to strip it to a clean skeleton._
 
 - [x] **P1.1** Choose DB provider + local-dev DB story. **No .NET Aspire** — it is
   orchestration tooling built for multi-service apps and is overkill for a
@@ -591,10 +592,14 @@ test-*data* convention.
   (`EmailConfirmed = true`, `role = Admin` in `psql`); re-runs log "Admin user
   … already present" with no duplicate and no password warning. Clean build,
   `dotnet test` 3/3.
-  _Follow-up (not P3.6):_ `scripts/remove-sample.sh` still rewrites
-  `AppDbContext` back to a plain `DbContext` and deletes `Data/Seed/` — that now
-  strips the Identity wiring too. The skeleton path needs reworking when the
-  `dotnet new` template (P7.2) is picked up.
+  _Follow-up (not P3.6), resolved:_ `scripts/remove-sample.sh` used to rewrite
+  `AppDbContext` back to a plain `DbContext`, stripping the Identity (and,
+  later, Data Protection) wiring along with the sample — a real regression by
+  the time P4 added Hangfire/caching/file-storage registrations the script
+  didn't know about either. Fixed alongside reconsidering the default itself
+  (P7.1 addendum, below): the script now surgically removes only the
+  `Listing`-specific lines from `AppDbContext.cs`/`Program.cs`, and
+  `new-project.sh` no longer runs it automatically — see P7.1.
 
 ### P4 — Batteries (no skill exists — net-new, document as you go)
 
@@ -942,11 +947,16 @@ deferred to **(vNext)** — see below.
   front door; `docs/new-project.md` the full walkthrough. Scripts:
   `preflight.sh` (checks .NET 10 / Docker / Node), `new-project.sh` (rename all
   `dotnetskills`-named files/dirs, regen `UserSecretsId`, reset README, drop
-  history docs, **strip the `Listing` sample by default** → clean skeleton;
-  `--with-sample` keeps it), `remove-sample.sh`, `setup-openspec.sh` (opt-in
-  `@fission-ai/openspec` for spec-driven feature work). **Both modes verified
-  end-to-end** on fresh clones: skeleton → build + 1 test pass; `--with-sample`
-  → build + 3 tests pass, seed applies 3 migrations.
+  history docs — **keeps the `Listing` sample by default**, the worked pattern
+  every P3/P4 doc points at), `remove-sample.sh` (standalone, run any time for
+  a clean skeleton instead — regenerates `Data/Migrations/` from scratch, since
+  the sample's migrations are entangled with the always-kept infra
+  migrations), `setup-openspec.sh` (opt-in `@fission-ai/openspec` for
+  spec-driven feature work). **Both paths verified end-to-end** on fresh
+  clones: sample kept → build + all tests pass, seed applies migrations;
+  `remove-sample.sh` run afterward → build + placeholder test passes, a fresh
+  single `InitialCreate` migration covers Identity/JobRun/StoredFile/Data
+  Protection with no `Listing` left anywhere in code or schema.
 - [ ] **P7.2 (vNext)** Real `dotnet new` custom template — the actual `rails new`
   capability. `.template.config/template.json` with parameters: project name,
   `--sample` (include/exclude the `Listing` feature), `--db` (sqlite|postgres).

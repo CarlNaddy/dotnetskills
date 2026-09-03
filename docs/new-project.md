@@ -47,15 +47,13 @@ cd <new-repo>
 ## Step 2 — Rename (scripted)
 
 ```bash
-bash scripts/new-project.sh Contoso.Portal                 # clean skeleton (recommended)
-bash scripts/new-project.sh Contoso.Portal --with-sample   # keep the Listing CRUD example
+bash scripts/new-project.sh Contoso.Portal
 ```
 
 **Windows without Git Bash yet:**
 
 ```powershell
 powershell -File scripts/new-project.ps1 Contoso.Portal
-powershell -File scripts/new-project.ps1 Contoso.Portal -WithSample
 ```
 
 Same script either way — `new-project.ps1` delegates to `new-project.sh` via
@@ -77,18 +75,38 @@ only). The script:
 - regenerates `<UserSecretsId>`;
 - resets `README.md` to a short project stub;
 - deletes this repo's history docs (`rails-parity-plan.md`, `setup-log.md`);
-- **removes the `Listing` sample feature** (`scripts/remove-sample.sh`) unless
-  `--with-sample` — deletes `Components/Pages/Listings/`, `Data/Listing.cs`,
-  `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs`; empties `AppDbContext`;
-  drops the seed dispatch from `Program.cs` and the Listings nav link. A
-  placeholder test replaces `ListingTests`.
 - installs the Claude Code plugins/skills from `.claude/settings.json`
   (idempotent — `check-plugins.sh --fix`; skipped with a warning if the
   `claude` CLI isn't on PATH, rerun any time);
 - prints the remaining manual steps.
 
-The project **compiles** either way. A skeleton has no entities, migrations, or
-seed data — like `rails new`.
+**Keeps the `Listing` sample feature** — it's the worked pattern every P3/P4
+doc points at (auth, jobs, caching, file storage), so the renamed project runs
+and has something to look at immediately, the same reasoning `rails new
+--minimal` vs. the full `rails new` weighs. Strip it down to an empty
+skeleton any time, standalone:
+
+```bash
+bash scripts/remove-sample.sh
+```
+
+This deletes `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`,
+`Features/Listings/`, `Endpoints/ListingsApiEndpoints.cs`,
+`Features/Jobs/ListingJobs.cs`, and their tests; trims the Listing-specific
+lines out of `AppDbContext.cs`, `Program.cs`, and the Listings nav link; and
+**regenerates `Data/Migrations/` from scratch** as a single fresh
+`InitialCreate` — the old migration history is entangled with `Listing` (one
+migration both creates the generic `StoredFiles` table and alters `Listings`
+in the same `Up()`), so migrations can't just be deleted piecemeal. Safe to
+run before Step 3 — `dotnet ef migrations add` never opens a real connection,
+so it works before the connection string is configured. What survives either
+way regardless of the sample: ASP.NET Core Identity, background jobs
+(Hangfire wiring), caching/rate limiting (first-party, minus the
+`Listing`-specific policy), file storage (`IFileStore`), Data Protection key
+persistence, health checks.
+
+The project **compiles** either way. A skeleton has no entities, domain
+migrations, or seed data — like `rails new`.
 
 ## Step 3 — Point at your database
 
@@ -122,8 +140,9 @@ dotnet test                         # xUnit v3 via MTP
 dotnet watch run                    # http://localhost:5xxx  →  Home
 ```
 
-With `--with-sample`, also run `dotnet run -- seed` (applies the 3 migrations
-and seeds 5 listings) and the nav has a **Listings** page.
+Also run `dotnet run -- seed` (applies migrations and seeds 5 listings) — the
+nav has a **Listings** page. Removed the sample in Step 2 instead? Use
+`dotnet ef database update` there instead of `seed`.
 
 ## Step 5 — Make it yours (`CLAUDE.md`)
 
@@ -146,7 +165,7 @@ dotnet ef database update
 ```
 
 Use `dotnet-data:create-datadriven-aspnetcore` + `mudblazor:mudblazor` for the
-CRUD UI. (With `--with-sample`, the `Listing` feature is the worked pattern.)
+CRUD UI. (Still have the sample? The `Listing` feature is the worked pattern.)
 
 ## Step 7 — (optional) Spec-driven development with OpenSpec
 
@@ -174,11 +193,15 @@ agent guidance after CLI upgrades.
 ## Step 8 — Commit
 
 ```bash
-git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh \
+git rm scripts/new-project.sh scripts/new-project.ps1 \
   scripts/_guard-not-template.sh docs/new-project.md   # templating helpers
 git add -A
 git commit -m "Initialize from template"
 ```
+
+Keep `scripts/remove-sample.sh` in this commit if you haven't decided yet
+whether to strip the sample — remove it by hand once you have (whichever way
+you decide).
 
 ---
 
@@ -187,12 +210,15 @@ git commit -m "Initialize from template"
 | Carries over | Removed by the script |
 |---|---|
 | `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-plan.md`, `docs/setup-log.md` |
-| `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs` *(kept with `--with-sample`)* |
-| `compose.yaml` shape | the `Listing` `DbSet` + `OnModelCreating` in `AppDbContext.cs`; the `SeedCommand` dispatch in `Program.cs`; the Listings nav link *(kept with `--with-sample`)* |
+| `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | — |
+| `compose.yaml` shape | — |
 | `Program.cs` wiring, `Endpoints/`, `Localization/`, `Resources/`, `tests/<Name>.Tests/` harness | — |
 | `fly.toml` / `.github/workflows/deploy.yml` (P5.3) — `fly.toml`'s `app` name is deliberately **not** rewritten (excluded from the identifier rewrite; Fly app names have different rules than a C# identifier) — set it by hand. See `docs/deployment.md`'s P5.3 section. | — |
 | `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/_find-git-bash.ps1`, `scripts/check-plugins.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
+| `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Features/Listings/`, `Endpoints/ListingsApiEndpoints.cs`, `Features/Jobs/ListingJobs.cs` — kept by default | *removed by `scripts/remove-sample.sh`, run separately, any time* |
 
 Remove by hand once set up: `scripts/new-project.sh`, `scripts/new-project.ps1`,
-`scripts/remove-sample.sh`, `scripts/_guard-not-template.sh`, `docs/new-project.md`.
+`scripts/_guard-not-template.sh`, `docs/new-project.md` — and
+`scripts/remove-sample.sh` too, once you've either run it or decided to keep
+the sample for good.
 Rewrite: `CLAUDE.md` title + "Reuse" section, `README.md` stub.

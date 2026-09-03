@@ -806,6 +806,23 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
 - [ ] **P5.3** CI/CD pipeline (GitHub Actions): restore → build → test → publish →
   deploy; one target (Azure Container Apps / App Service / Fly.io / self-host).
   _Skill:_ — · _Accept:_ green pipeline deploys to a live environment.
+  _Prepared, not yet exercised:_ target chosen — **Fly.io**.
+  `.github/workflows/deploy.yml` — gated on the existing `CI` workflow
+  (P2.5) passing on `main` via `workflow_run`, no duplicated test job.
+  Builds the P5.1 image, pushes it to GitHub Container Registry tagged by
+  commit SHA (never `latest`), `flyctl deploy`s it. `fly.toml` deliberately
+  has no `[build]` section (no Dockerfile in this repo; the workflow always
+  passes `--image` explicitly), health check points at `/alive` (P5.4 —
+  liveness only, so a DB blip doesn't wrongly flag the Machine itself as
+  unhealthy). Container-publish property overrides (`ContainerRepository`,
+  `ContainerImageTag`) verified locally; the YAML/TOML syntax verified
+  parseable. Left unchecked deliberately — it hasn't deployed anywhere live
+  yet, because that needs one-time account-side setup only the app's owner
+  can do (create the Fly app, attach Postgres, set every secret, add
+  `FLY_API_TOKEN`) — exact commands in
+  [`docs/deployment.md`](deployment.md)'s P5.3 section. This mirrors P3.4's
+  OAuth round-trip: code complete and locally verified up to the boundary
+  of needing real external credentials, not faked past it.
 - [x] **P5.4** Production hardening: HTTPS, persisted Data Protection keys,
   secrets via env / key vault, `/health` + `/alive` health checks
   (`Microsoft.Extensions.Diagnostics.HealthChecks`). _Skill:_ — · _Accept:_

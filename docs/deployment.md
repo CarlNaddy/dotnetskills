@@ -127,13 +127,83 @@ pattern already covers everything, including the two things P5.4 itself
 added (Data Protection needs no secret at all; health checks expose no
 secret either).
 
-## What's still open (P5.3)
+## P5.3 — CI/CD to a live target (Fly.io)
 
-CI/CD to a live target needs an actual hosting decision (Azure Container
-Apps / App Service / Fly.io / self-host) and real credentials — not
-something to pick unilaterally. GitHub Actions already runs
-restore → build → test (P2.5); extending it to publish + deploy is
-straightforward once a target is chosen.
+**The pipeline is fully written and locally verified where it can be
+without an account — it hasn't deployed anywhere live yet.** That needs
+account-side setup only you can do (a Fly.io account, credentials, real
+secrets) — this section is the exact, complete list.
+
+### How it's wired
+
+```
+.github/workflows/deploy.yml   # publish + deploy, gated on CI (P2.5) passing on main
+fly.toml                       # Fly app config
+```
+
+- **Triggered by `workflow_run`**, not its own copy of the test job —
+  `deploy.yml` only runs after the existing `CI` workflow (P2.5) completes
+  successfully on `main`. No duplicated restore/build/test step.
+- **Image**: the same P5.1 `dotnet publish -t:PublishContainer` used
+  locally, pushed to **GitHub Container Registry** (`ghcr.io`) — no extra
+  registry account or secret needed beyond the `GITHUB_TOKEN` Actions
+  already provides. Tagged by **commit SHA**, never `latest` — every deploy
+  references one exact, reproducible image.
+- **`fly.toml`** has no `[build]` section — `flyctl deploy` in the workflow
+  always gets `--image ghcr.io/<owner>/dotnetskills:<sha>` explicitly. A
+  bare `fly deploy` run by hand without `--image` would otherwise look for
+  a Dockerfile, which this repo deliberately doesn't have.
+- **`/alive`** (P5.4 — liveness only, no DB dependency) is the configured
+  health check, not `/health` — the right choice for "is this Machine up,"
+  not "can it reach every dependency right now" (which a database blip
+  would then wrongly flag as *this Machine* being unhealthy).
+
+### Account-side setup (you, once, to make this real)
+
+```bash
+# 1. Install flyctl and log in
+curl -L https://fly.io/install.sh | sh
+fly auth login
+
+# 2. Create the app — pick a globally-unique name and a region; update
+#    fly.toml's `app` and `primary_region` to match what you chose
+fly apps create <your-app-name>
+
+# 3. Postgres — Fly Postgres is the natural default (same "no separate
+#    infra" pattern as everything else in this app), but any reachable
+#    Postgres works, it's just a connection string
+fly postgres create --name <your-app-name>-db
+fly postgres attach <your-app-name>-db -a <your-app-name>
+
+# 4. Every secret this app needs in prod — none of these are in fly.toml
+#    or the repo, on purpose (same env-var-in-prod pattern as everywhere
+#    else — P1.3, P3.4, P3.6, P4.2). `fly postgres attach` above already
+#    set ConnectionStrings__Default for you; the rest need setting by hand:
+fly secrets set Seed__AdminPassword="<a real password>" -a <your-app-name>
+fly secrets set Email__Host="<your real SMTP host>" \
+  Email__Port="<port>" Email__Username="<user>" Email__Password="<password>" \
+  -a <your-app-name>
+# Only if you're using external OAuth logins (P3.4):
+fly secrets set Authentication__Google__ClientId="..." Authentication__Google__ClientSecret="..." \
+  -a <your-app-name>
+
+# 5. FLY_API_TOKEN, so the GitHub Actions workflow can deploy on your behalf
+fly tokens create deploy -a <your-app-name>
+# Add the output as a repository secret: Settings -> Secrets and variables
+# -> Actions -> New repository secret -> name it FLY_API_TOKEN
+```
+
+After that, the next push to `main` (once `CI` passes) triggers a real
+deploy automatically. `fly logs -a <your-app-name>` and
+`fly status -a <your-app-name>` are the equivalents of the `docker compose
+logs -f app` / `docker compose ps` used locally in P5.2.
+
+**Not done for you, deliberately:** creating the Fly app, provisioning
+Postgres, and every secret value above are account-and-money decisions —
+the same reasoning P5.3 itself was blocked on before a target was chosen.
+Once you've run the steps above, this phase's own accept criterion ("green
+pipeline deploys to a live environment") is something *you* can watch
+happen on the next push, not something to fake here.
 
 ## Verified end-to-end (2026-09-03)
 

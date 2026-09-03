@@ -1,0 +1,35 @@
+# Fly.io app config (rails-parity plan P5.3). The deployed image is built and
+# pushed by .github/workflows/deploy.yml (the P5.1 SDK container publish,
+# ghcr.io-hosted) — not a `[build]` section here, since this repo
+# deliberately has no Dockerfile. See docs/deployment.md "P5.3" for the
+# account-side setup this depends on: creating the app, attaching Postgres,
+# and setting every secret below via `fly secrets set`.
+
+app = "dotnetskills"          # rename to whatever you `fly apps create`
+primary_region = "iad"        # edit to whatever region you pick at create time
+
+[build]
+  # Deliberately empty. `flyctl deploy` always gets --image explicitly (see
+  # deploy.yml) — a bare `fly deploy` run by hand without --image would
+  # otherwise look for a Dockerfile, which doesn't exist here on purpose.
+
+[http_service]
+  internal_port = 8080        # matches the container's ASPNETCORE_HTTP_PORTS default (P5.1)
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[http_service.checks]]
+  interval = "15s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/alive"              # liveness only, no DB dependency (P5.4)
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  # ConnectionStrings__Default, Seed__AdminPassword, Email__*,
+  # Authentication__<Provider>__ClientSecret, etc. are deliberately NOT
+  # here — every secret is set with `fly secrets set`, never committed.
+  # See docs/deployment.md.

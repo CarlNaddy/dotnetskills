@@ -41,8 +41,10 @@ delegates to Git Bash if found, or tells you exactly what to install if not.
 
 ## Create a project from this template
 
-You get a **clean skeleton** — the app fully wired (DB, MudBlazor, localization,
-tests) but no domain code, like `rails new`.
+You get the app fully wired (DB, auth, MudBlazor, background jobs, caching,
+file storage, localization, tests) plus a worked sample feature (`Listing`)
+to look at immediately — strip it down to a clean skeleton any time with
+`bash scripts/remove-sample.sh`, like `rails new --minimal`.
 
 1. On GitHub click **Use this template → Create a new repository**, then clone it.
 2. Rename it (runs `preflight.sh` first):
@@ -54,10 +56,10 @@ tests) but no domain code, like `rails new`.
 
    Replaces the `dotnetskills` identifier and every `dotnetskills`-named file and
    folder, regenerates the `UserSecretsId`, resets this README, removes the
-   template's history docs, **strips the `Listing` sample feature** (pass
-   `--with-sample` to keep the worked CRUD example), and installs the Claude
-   Code plugins/skills from `.claude/settings.json` (idempotent — rerun any
-   time with `bash scripts/check-plugins.sh --fix`).
+   template's history docs, and installs the Claude Code plugins/skills from
+   `.claude/settings.json` (idempotent — rerun any time with `bash
+   scripts/check-plugins.sh --fix`). Keeps the `Listing` sample — run `bash
+   scripts/remove-sample.sh` yourself, any time, for a clean skeleton instead.
 3. Point at a database — edit `compose.yaml` (Postgres db/user/password), then:
    ```bash
    dotnet user-secrets set "ConnectionStrings:Default" \
@@ -70,10 +72,12 @@ tests) but no domain code, like `rails new`.
    dotnet watch run           # http://localhost:5xxx  →  Home
    ```
 5. Make `CLAUDE.md` yours.
-6. `git rm scripts/new-project.sh scripts/new-project.ps1 scripts/remove-sample.sh
+6. `git rm scripts/new-project.sh scripts/new-project.ps1
    scripts/_guard-not-template.sh docs/new-project.md`,
-   then commit. Keep `scripts/update-from-template.sh`, `docs/updating-from-template.md`
-   and `.template-version` — they let you pull later template changes.
+   then commit. Keep `scripts/remove-sample.sh` until you've run it (or decided
+   to keep the sample for good), `scripts/update-from-template.sh`,
+   `docs/updating-from-template.md` and `.template-version` — the latter three
+   let you pull later template changes.
 
 **Full step-by-step (verified end to end): [`docs/new-project.md`](docs/new-project.md).**
 

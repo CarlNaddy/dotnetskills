@@ -3,6 +3,7 @@ using dotnetskills.Components.Account;
 using dotnetskills.Data;
 using dotnetskills.Data.Seed;
 using dotnetskills.Endpoints;
+using dotnetskills.Features.Console;
 using dotnetskills.Features.Email;
 using dotnetskills.Features.Files;
 using dotnetskills.Features.Jobs;
@@ -214,6 +215,14 @@ var app = builder.Build();
 if (args.Contains(SeedCommand.Verb))
 {
     await SeedCommand.RunAsync(app.Services);
+    return;
+}
+
+// `dotnet run -- console`: the rails-console substitute (parity plan P6.2) —
+// runs Features/Console/Scratch.cs against the real app, then exits.
+if (args.Contains(ConsoleCommand.Verb))
+{
+    await ConsoleCommand.RunAsync(app.Services);
     return;
 }
 

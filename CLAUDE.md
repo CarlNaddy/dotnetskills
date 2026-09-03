@@ -300,6 +300,22 @@ and the worked pattern: [`docs/file-storage.md`](docs/file-storage.md).
   against a *real* `LocalDiskFileStore` (a throwaway temp dir + real
   Postgres), not a fake — matching how the rest of this suite avoids mocks.
 
+## Console
+
+`dotnet run -- console` (parity plan **P6.2**, the `rails console` substitute)
+— edit `Features/Console/Scratch.cs`'s `RunAsync` with whatever one-off C# you
+need (a LINQ query against `AppDbContext` via `IDbContextFactory`, a call to
+any registered service, triggering a job by hand), then run the command. It
+runs against the **real, fully-configured app** — the user-secrets connection
+string, every DI registration — not a Testcontainers fixture, so it's for
+inspecting/fixing real dev data, not for tests. Same verb-dispatch pattern as
+`dotnet run -- seed` (`SeedCommand`) — no scripting engine, no new dependency,
+full compile-time/analyzer/nullable checking since it's ordinary project code.
+Convention: `git checkout -- Features/Console/Scratch.cs` after you're done, to
+restore the trivial starter body — treat it like shell history, not like
+`db/seeds.rb`. A snippet worth keeping graduates to a real job
+(`Features/Jobs/`) or its own CLI verb instead of staying here.
+
 ## Deployment
 
 Official Microsoft container guidance throughout (parity plan **P5**) — no

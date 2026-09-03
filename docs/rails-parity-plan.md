@@ -58,7 +58,7 @@ definition, or without a direct scorecard line):
 | Test factories (FactoryBot) / fixtures | ✅ `Bogus`-backed builders (P2.2) |
 | EF Core test approach | ✅ Testcontainers + real Postgres (P2.3) |
 | Component tests | ✅ `bUnit` (P2.4) |
-| `rails console` (REPL over app DI) | ❌ no skill, no ergonomic equivalent (P6.2) |
+| `rails console` (REPL over app DI) | ✅ `dotnet run -- console` — edit `Features/Console/Scratch.cs`, run it against the real app (P6.2) |
 | ActionMailer | ✅ MailKit behind Identity's `IEmailSender<TUser>`, Razor-component templates via `HtmlRenderer`, dev sink `smtp4dev`; confirm-before-login + forgot/reset password wired (P4.2) |
 | ActiveJob + Sidekiq | ✅ Hangfire, storage in the app's own Postgres, `/hangfire` dashboard gated to `Admin` (P4.1) |
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
@@ -923,9 +923,25 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
 
 - [ ] **P6.1** ~~Localization~~ → **moved to P0.7** (promoted — wanted early,
   before UI text accumulates).
-- [ ] **P6.2** `rails console` substitute: a DI-wired CLI verb host
-  (`dotnet run -- <command>`) or `dotnet-script` with a DI bootstrap. _Skill:_ —
-  · _Accept:_ run an ad-hoc query against real services from the terminal.
+- [x] **P6.2** `rails console` substitute: a DI-wired CLI verb host
+  (`dotnet run -- <command>`). _Skill:_ — · _Accept:_ run an ad-hoc query
+  against real services from the terminal.
+  _Done:_ `dotnet run -- console` — generalizes `SeedCommand`'s existing verb
+  pattern rather than adding `dotnet-script`/Roslyn scripting: edit
+  `Features/Console/Scratch.cs`'s `RunAsync`, run the verb, it executes
+  against the real app's DI container (user-secrets connection string, every
+  registration), then exits. Chosen over an interactive REPL because ad-hoc
+  code here is agent-written, not typed line-by-line at a prompt — an
+  edit-then-run loop is the workflow already in use throughout this repo, and
+  ordinary compiled C# gets full nullable/analyzer checking a scripting
+  engine wouldn't. Convention: `git checkout -- Features/Console/Scratch.cs`
+  after use, so it never actually accumulates diffs (like shell history, not
+  `db/seeds.rb`); a snippet worth keeping graduates to a real job or CLI verb.
+  `Program.cs` picks it up alongside the `seed` verb. Verified: `dotnet run --
+  console` against the real dev DB (`docker compose up -d db`, already
+  seeded) printed `Users: 1` — the real seeded admin, not a fixture. Clean
+  build (0 warnings), `dotnet format --verify-no-changes` clean, `dotnet test`
+  → 29/29 (unchanged — no test-covered code path touched).
 - [ ] **P6.3** `.http` request collections per API area. _Skill:_ `dotnet-webapi`
   · _Accept:_ checked-in `.http` covering each endpoint.
 

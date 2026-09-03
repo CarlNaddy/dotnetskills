@@ -941,7 +941,8 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   console` against the real dev DB (`docker compose up -d db`, already
   seeded) printed `Users: 1` — the real seeded admin, not a fixture. Clean
   build (0 warnings), `dotnet format --verify-no-changes` clean, `dotnet test`
-  → 29/29 (unchanged — no test-covered code path touched).
+  → 29/29 (unchanged — no test-covered code path touched). Full reference:
+  [`docs/console.md`](console.md).
 - [ ] **P6.3** `.http` request collections per API area. _Skill:_ `dotnet-webapi`
   · _Accept:_ checked-in `.http` covering each endpoint.
 

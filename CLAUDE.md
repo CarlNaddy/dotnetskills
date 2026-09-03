@@ -314,7 +314,8 @@ full compile-time/analyzer/nullable checking since it's ordinary project code.
 Convention: `git checkout -- Features/Console/Scratch.cs` after you're done, to
 restore the trivial starter body — treat it like shell history, not like
 `db/seeds.rb`. A snippet worth keeping graduates to a real job
-(`Features/Jobs/`) or its own CLI verb instead of staying here.
+(`Features/Jobs/`) or its own CLI verb instead of staying here. Full
+reference, worked example, and how it's wired: [`docs/console.md`](docs/console.md).
 
 ## Deployment
 

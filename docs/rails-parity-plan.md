@@ -772,10 +772,13 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   `dotnet-aspnetcore` patterns · _Accept:_ image builds and runs.
   _Done:_ `dotnet publish dotnetskills.csproj -t:PublishContainer -c Release`
   — no Dockerfile added. Base image/tag resolve from `TargetFramework`
-  (`mcr.microsoft.com/dotnet/aspnet:10.0`); `<ContainerRepository>dotnetskills</ContainerRepository>`
-  pins the name in `dotnetskills.csproj`. `.dockerignore` added for the
-  documented Dockerfile-fallback path (the SDK publish path itself builds
-  from `dotnet publish` output, not a build context, so doesn't read it).
+  (`mcr.microsoft.com/dotnet/aspnet:10.0`).
+  `<ContainerRepository>$(MSBuildProjectName.ToLowerInvariant())</ContainerRepository>`
+  in `dotnetskills.csproj` — **self-derived, not a literal string** (see the
+  P5.3 addendum below for why this matters and how it was caught).
+  `.dockerignore` added for the documented Dockerfile-fallback path (the SDK
+  publish path itself builds from `dotnet publish` output, not a build
+  context, so doesn't read it).
   **Verified end-to-end**: image builds (381MB), `docker run` connected to
   the real Postgres over the compose network — home page and `/listings`
   both 200, `/api/listings` returns real data, proving genuine DB
@@ -787,14 +790,18 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   (app + Postgres + mail sink), per the MS Docker Compose docs. **No Aspire.**
   Redis is added here only at **(vNext)**. _Skill:_ — · _Accept:_ one command
   serves the app with its dependencies.
-  _Done:_ `compose.yaml` gets an `app` service — image `dotnetskills:latest`
-  (the P5.1 build), **not** a Dockerfile `build:` section (Compose's build
-  mechanism expects one, and P5.1 deliberately has none), so a bare `docker
-  compose up` can't build it from source. `scripts/run-stack.sh` is what
-  makes it genuinely one command: runs the P5.1 publish, `docker compose up
-  -d`, then seeds via `docker compose run --rm app seed` (the image's
-  exec-form `ENTRYPOINT` + an appended `seed` arg reaches the same `dotnet
-  run -- seed` verb dispatch). `--down` / `--no-seed` flags.
+  _Done:_ `compose.yaml` gets an `app` service — image
+  `${APP_IMAGE:-dotnetskills}:latest` (the P5.1 build), **not** a Dockerfile
+  `build:` section (Compose's build mechanism expects one, and P5.1
+  deliberately has none), so a bare `docker compose up` can't build it from
+  source. `scripts/run-stack.sh` is what makes it genuinely one command:
+  computes `$APP_IMAGE` (the lowercased project name — `compose.yaml` can't
+  evaluate P5.1's self-deriving MSBuild function, so this script computes
+  the equivalent independently and exports it), runs the P5.1 publish,
+  `docker compose up -d` (picks up `$APP_IMAGE`), then seeds via `docker
+  compose run --rm app seed` (the image's exec-form `ENTRYPOINT` + an
+  appended `seed` arg reaches the same `dotnet run -- seed` verb dispatch).
+  `--down` / `--no-seed` flags.
   **Verified end-to-end from a genuinely fresh state**
   (`docker compose down -v`, wiping the Postgres volume, then the script
   with nothing pre-existing): image builds, all three services start (`db`
@@ -809,12 +816,19 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   _Prepared, not yet exercised:_ target chosen — **Fly.io**.
   `.github/workflows/deploy.yml` — gated on the existing `CI` workflow
   (P2.5) passing on `main` via `workflow_run`, no duplicated test job.
-  Builds the P5.1 image, pushes it to GitHub Container Registry tagged by
-  commit SHA (never `latest`), `flyctl deploy`s it. `fly.toml` deliberately
-  has no `[build]` section (no Dockerfile in this repo; the workflow always
-  passes `--image` explicitly), health check points at `/alive` (P5.4 —
-  liveness only, so a DB blip doesn't wrongly flag the Machine itself as
-  unhealthy). Container-publish property overrides (`ContainerRepository`,
+  Builds the P5.1 image, pushes it to GitHub Container Registry — the
+  repository name computed once (`${GITHUB_REPOSITORY,,}`, lowercased,
+  since neither GitHub repo names nor renamed project names are guaranteed
+  lowercase) and reused for both the publish step and `flyctl deploy
+  --image`, so they can't drift apart — tagged by commit SHA, never
+  `latest`. `fly.toml` deliberately has no `[build]` section (no Dockerfile
+  in this repo; the workflow always passes `--image` explicitly), health
+  check points at `/alive` (P5.4 — liveness only, so a DB blip doesn't
+  wrongly flag the Machine itself as unhealthy); its `app` line is an
+  explicit placeholder (`"your-app-name"`), excluded from
+  `scripts/new-project.sh`'s identifier rewrite (Fly app names have
+  different naming rules than a C# project name — see the addendum below).
+  Container-publish property overrides (`ContainerRepository`,
   `ContainerImageTag`) verified locally; the YAML/TOML syntax verified
   parseable. Left unchecked deliberately — it hasn't deployed anywhere live
   yet, because that needs one-time account-side setup only the app's owner
@@ -823,6 +837,41 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   [`docs/deployment.md`](deployment.md)'s P5.3 section. This mirrors P3.4's
   OAuth round-trip: code complete and locally verified up to the boundary
   of needing real external credentials, not faked past it.
+
+  **Addendum — a real bug in the already-shipped P5.1/P5.2, found by
+  actually testing the template's own rename against this work, not just
+  reviewing the docs wording.** Docker/OCI repository names and Fly app
+  names must be lowercase; this template's rename
+  (`scripts/new-project.sh`) produces PascalCase project names
+  (`Contoso.Portal`) by design, matching normal .NET convention. The
+  original P5.1/P5.2 design hardcoded literal `dotnetskills` strings in
+  `dotnetskills.csproj`'s `ContainerRepository`, `compose.yaml`'s `image:`,
+  and `fly.toml`'s `app`; the blanket rename correctly turns all three into
+  `Contoso.Portal`, but the SDK's container publish *silently* normalizes
+  the invalid casing to `contoso-portal` when it actually builds — so the
+  image genuinely gets built and tagged successfully, while every literal
+  reference to `Contoso.Portal:latest` elsewhere pointed at an image that
+  never existed under that name. Reproduced for real: `bash
+  scripts/new-project.sh Contoso.Portal --with-sample` against a throwaway
+  clone, then `docker compose up` failed with `invalid reference format:
+  repository name (library/Contoso.Portal) must be lowercase`. Fixed by
+  removing the literal strings entirely rather than patching the docs:
+  `dotnetskills.csproj`'s `ContainerRepository` now self-derives
+  (`$(MSBuildProjectName.ToLowerInvariant())`, evaluated correctly for any
+  project name, nothing to keep in sync); `scripts/run-stack.sh` computes
+  the same lowercased value independently (`compose.yaml` can't evaluate
+  MSBuild functions) and exports it as `$APP_IMAGE`, which `compose.yaml`
+  now references instead of a literal name; `deploy.yml` computes its own
+  equivalent (`${GITHUB_REPOSITORY,,}`) once and reuses it for both steps
+  that need an image reference. `fly.toml`'s `app` is a different case —
+  a Fly app name can't be correctly *auto-derived* at all (must be globally
+  unique, chosen at `fly apps create` time) — so it's excluded from the
+  rewrite entirely and left an explicit, unambiguous placeholder instead of
+  a renamed-but-still-wrong value. Re-verified the complete fix against a
+  fresh renamed clone: `dotnetskills.csproj`/`fly.toml` unaffected by the
+  rewrite (nothing left to rewrite in them), `bash scripts/run-stack.sh
+  --no-seed` → `docker compose ps` shows `contoso.portal:latest` running,
+  `/alive` → 200.
 - [x] **P5.4** Production hardening: HTTPS, persisted Data Protection keys,
   secrets via env / key vault, `/health` + `/alive` health checks
   (`Microsoft.Extensions.Diagnostics.HealthChecks`). _Skill:_ — · _Accept:_

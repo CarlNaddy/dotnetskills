@@ -8,10 +8,14 @@
 # dotnetskills.csproj) — not a Dockerfile `build:` section, so the image must
 # already exist locally before `docker compose up` includes it; run
 # scripts/run-stack.sh instead of a bare `docker compose up` to get both
-# steps as one command. Dev connection string for the *host* dev loop
-# (`dotnet watch run`) goes in user-secrets (plan P1.3), not here; `app`
-# itself gets its connection string as a plain env var below — fine for
-# local dev, see docs/deployment.md for the prod-secrets story (P5.4).
+# steps as one command. `run-stack.sh` also sets $APP_IMAGE below, lowercased
+# from the .csproj name to match what dotnetskills.csproj's ContainerRepository
+# actually builds — a bare `docker compose up` (no $APP_IMAGE) falls back to
+# the template's own literal name, only correct for this repo unrenamed. Dev
+# connection string for the *host* dev loop (`dotnet watch run`) goes in
+# user-secrets (plan P1.3), not here; `app` itself gets its connection string
+# as a plain env var below — fine for local dev, see docs/deployment.md for
+# the prod-secrets story (P5.4).
 
 services:
   db:
@@ -47,7 +51,7 @@ services:
   # `db`/`mail` by their service names, not localhost — a different network
   # namespace than the host-side dev loop uses.
   app:
-    image: dotnetskills:latest
+    image: ${APP_IMAGE:-dotnetskills}:latest
     restart: unless-stopped
     depends_on:
       db:

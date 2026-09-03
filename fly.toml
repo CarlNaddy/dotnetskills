@@ -4,8 +4,14 @@
 # deliberately has no Dockerfile. See docs/deployment.md "P5.3" for the
 # account-side setup this depends on: creating the app, attaching Postgres,
 # and setting every secret below via `fly secrets set`.
+#
+# `app` below is a placeholder, not this repo's name — Fly app names must be
+# globally unique and lowercase/hyphens only (unlike a C# project name, which
+# can't be auto-derived into one correctly), so this file is deliberately
+# excluded from scripts/new-project.sh's identifier rewrite. Replace it with
+# whatever you `fly apps create` yourself.
 
-app = "dotnetskills"          # rename to whatever you `fly apps create`
+app = "your-app-name"         # required — `fly apps create <name>` first, then set this to match
 primary_region = "iad"        # edit to whatever region you pick at create time
 
 [build]

@@ -186,10 +186,11 @@ git commit -m "Initialize from template"
 
 | Carries over | Removed by the script |
 |---|---|
-| `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-*.md`, `docs/setup-log.md` |
+| `.claude/settings.json` — plugins & marketplaces | `docs/rails-parity-plan.md`, `docs/setup-log.md` |
 | `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Data/Migrations/`, `ListingTests.cs` *(kept with `--with-sample`)* |
 | `compose.yaml` shape | the `Listing` `DbSet` + `OnModelCreating` in `AppDbContext.cs`; the `SeedCommand` dispatch in `Program.cs`; the Listings nav link *(kept with `--with-sample`)* |
 | `Program.cs` wiring, `Endpoints/`, `Localization/`, `Resources/`, `tests/<Name>.Tests/` harness | — |
+| `fly.toml` / `.github/workflows/deploy.yml` (P5.3) — `fly.toml`'s `app` name is deliberately **not** rewritten (excluded from the identifier rewrite; Fly app names have different rules than a C# identifier) — set it by hand. See `docs/deployment.md`'s P5.3 section. | — |
 | `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/_find-git-bash.ps1`, `scripts/check-plugins.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
 
 Remove by hand once set up: `scripts/new-project.sh`, `scripts/new-project.ps1`,

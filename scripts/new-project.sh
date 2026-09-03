@@ -49,7 +49,13 @@ git ls-files -z \
     | grep -zvE '\.(png|jpe?g|gif|ico|woff2?|ttf|eot)$' \
     | grep -zvE '(^|/)(scripts/new-project|scripts/update-from-template|scripts/_guard-not-template)\.sh$' \
     | grep -zvE '(^|/)docs/updating-from-template\.md$' \
+    | grep -zvE '(^|/)fly\.toml$' \
     | xargs -0 sed -i "s/${OLD}/${NEW}/g"
+# fly.toml's `app` name has different rules than a C# identifier (lowercase,
+# globally unique, chosen at `fly apps create` time) — excluded so the
+# blanket rewrite above never silently produces an invalid value there; its
+# placeholder ("your-app-name") is meant to be set by hand regardless (P5.3,
+# docs/deployment.md).
 
 echo "==> Renaming files/directories that contain '$OLD'"
 git ls-files | grep -F "$OLD" | while IFS= read -r f; do

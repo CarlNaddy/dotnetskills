@@ -33,7 +33,9 @@ real credentials, not something to pick unilaterally.** P4 is the half where
 Rails' "it's already there" advantage is structural: no first-party library
 and no Claude Code skill covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
-per item); P5 follows standard Microsoft container/CI guidance.
+per item); P5 follows standard Microsoft container/CI guidance. **P6 is
+done** — P6.1 was promoted to P0.7, P6.2 (`rails console` substitute) and
+P6.3 (`.http` request collections) are both complete.
 
 ### Scorecard against the "parity" definition above
 
@@ -943,8 +945,30 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   build (0 warnings), `dotnet format --verify-no-changes` clean, `dotnet test`
   → 29/29 (unchanged — no test-covered code path touched). Full reference:
   [`docs/console.md`](console.md).
-- [ ] **P6.3** `.http` request collections per API area. _Skill:_ `dotnet-webapi`
+- [x] **P6.3** `.http` request collections per API area. _Skill:_ `dotnet-webapi`
   · _Accept:_ checked-in `.http` covering each endpoint.
+  _Done:_ one `.http` file per `Endpoints/*.cs` resource, colocated —
+  `Listings.http`, `Files.http`, `Account.http`, `Culture.http`,
+  `Health.http` (the last two have no dedicated `*Endpoints.cs`: culture/
+  health checks map directly in `Program.cs`). Documents every endpoint this
+  app has, not new ones — no new DTOs/`TypedResults`/OpenAPI wiring added;
+  this app's existing endpoints already return entities directly and use the
+  `Results` factory, an established, already-tested convention out of scope
+  to change here. Public GETs are directly runnable; the form-bound POSTs
+  (photo upload, `Account/Logout`, the external-login challenge) are
+  documented but need a real browser session's cookie + antiforgery token
+  substituted in — ASP.NET Core auto-validates antiforgery on any form-bound
+  endpoint (.NET 8+), so a raw request can't skip it, and there's no
+  scripted way to obtain one without an interactive login.
+  Verified: `dotnet run` (Development, real Postgres already seeded) +
+  `curl` against every public GET in the `.http` files — `GET
+  /api/listings` → 200 with the 5 seeded listings; `GET /api/listings/1` →
+  200 with that listing's fields; `GET /api/listings/999999` → 404; `GET
+  /api/files/{random-guid}` → 404; `GET /health` → 200 `Healthy`; `GET
+  /alive` → 200 `Healthy`; `GET /culture/set?...` → 302. Clean build (0
+  warnings), `dotnet format --verify-no-changes` clean, `dotnet test` →
+  29/29 (unchanged — no test-covered code path touched, `.http` files
+  aren't compiled).
 
 ### P7 — Packaging & reuse (the `rails new` analog)
 

@@ -558,6 +558,14 @@ project.
   components specific to that feature.
 - `Endpoints/` — minimal-API `Map*` extension methods grouped by resource,
   called from `Program.cs`. No `Controllers/` unless a real MVC need appears.
+  A `.http` file per resource (parity plan **P6.3**) lives alongside its
+  `*Endpoints.cs` — `Listings.http`, `Files.http`, `Account.http`,
+  `Culture.http`, `Health.http` — runnable in VS Code's REST Client or
+  Rider's built-in HTTP client. Public GETs are copy-paste runnable; the
+  form-bound POSTs (photo upload, `Account/Logout`, external-login
+  challenge) need a real browser session's cookie + antiforgery token
+  substituted in — documented inline in each file. Add a new `<Resource>.http`
+  alongside any new `Endpoints/<Resource>Endpoints.cs`.
 - Repo root holds `Program.cs` only.
 
 ### Services, DI, data access

@@ -845,6 +845,21 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   OAuth round-trip: code complete and locally verified up to the boundary
   of needing real external credentials, not faked past it.
 
+  _flyctl is now part of template setup._ `scripts/install-flyctl.sh` (new,
+  rerunnable standalone) installs the Fly CLI best-effort — skips if it's
+  already on `PATH`, detects an existing `~/.fly/bin` install that isn't on
+  `PATH`, else runs the vendor installer (`curl|sh` on POSIX, the
+  PowerShell installer via `powershell.exe` on Windows).
+  `scripts/new-project.sh` calls it after the AI-tooling step (non-fatal,
+  same idiom as `dotnet tool restore` / `check-plugins.sh --fix`), then
+  post-checks `command -v flyctl` and prints an end-of-run row when the
+  freshly installed CLI isn't visible to the shell yet (open a new
+  terminal, or on Windows sign out / reboot so `PATH` propagates).
+  `scripts/preflight.sh` gained an optional Fly.io row that distinguishes
+  "not installed" from "installed but not on this shell's `PATH`". So the
+  only thing still missing for a green pipeline is the account-side setup
+  above — the tool to run it is now in place on a fresh clone.
+
   **Addendum — a real bug in the already-shipped P5.1/P5.2, found by
   actually testing the template's own rename against this work, not just
   reviewing the docs wording.** Docker/OCI repository names and Fly app

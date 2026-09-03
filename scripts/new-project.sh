@@ -160,6 +160,25 @@ else
     ai_note="$ai_note  bash scripts/check-plugins.sh --fix  (or open the repo in Claude Code)"
 fi
 
+echo
+echo "==> Deployment tooling — installing flyctl (Fly.io CLI, P5.3)"
+# flyctl is only needed to deploy (docs/deployment.md 'P5.3'), never for
+# build/run/test — so this is best-effort and non-fatal, same as the
+# dotnet-tools and AI-tooling steps above. Logic lives in its own script so
+# it can be rerun standalone.
+fly_note=""
+if "$ROOT/scripts/install-flyctl.sh"; then
+    # Installed OK (or already present). If the install just added it to PATH,
+    # THIS shell — and any new terminal spawned from a process that predates
+    # the change — still won't see it. Surface that as an end-of-run action row
+    # rather than a mid-stream line that scrolls away under the steps below.
+    if ! command -v flyctl >/dev/null 2>&1 && ! command -v fly >/dev/null 2>&1; then
+        fly_note="flyctl was installed but is not on PATH yet — open a NEW terminal; if 'fly' still isn't found there, sign out of Windows / reboot so the PATH change propagates. Then: fly auth login  (docs/deployment.md 'P5.3')"
+    fi
+else
+    fly_note="flyctl not installed — rerun:  bash scripts/install-flyctl.sh  (details: docs/deployment.md 'P5.3')"
+fi
+
 cat <<EOF
 
 Rename done — the \`Listing\` sample feature is still here (it's the worked
@@ -187,10 +206,16 @@ manual steps:
      Keep scripts/remove-sample.sh until you've actually run it (or decided to
      keep the sample for good — then remove it too). Keep: scripts/preflight.sh,
      scripts/preflight.ps1, scripts/_find-git-bash.ps1, scripts/check-plugins.sh,
-     scripts/setup-openspec.sh, docs/ef-migrations.md, and — to pull future
-     template updates — scripts/update-from-template.sh,
+     scripts/install-flyctl.sh, scripts/setup-openspec.sh, docs/ef-migrations.md,
+     and — to pull future template updates — scripts/update-from-template.sh,
      docs/updating-from-template.md, .template-version.
   9. git add -A && git commit -m "Initialize from template"
+
+Later, to deploy (Fly.io, P5.3):
+     fly auth login && fly apps create <name>   # then set fly.toml's \`app\`
+   flyctl is installed by this script — if it was installed just now, open a
+   NEW terminal before \`fly\` resolves (see the note at the end of this output).
+   Full account-side setup (Postgres, secrets, FLY_API_TOKEN): docs/deployment.md 'P5.3'.
 
 Later, to pull template changes into this project:
      bash scripts/update-from-template.sh --dry-run   # preview
@@ -199,3 +224,4 @@ Later, to pull template changes into this project:
 EOF
 [ -z "$tools_note" ] || echo "$tools_note"
 [ -z "$ai_note" ] || echo "$ai_note"
+[ -z "$fly_note" ] || echo "$fly_note"

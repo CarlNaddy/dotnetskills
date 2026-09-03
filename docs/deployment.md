@@ -15,17 +15,55 @@ dotnet publish dotnetskills.csproj -t:PublishContainer -c Release
 target (`Microsoft.NET.Build.Containers`, built in since .NET 7) builds the
 image directly from `dotnet publish` output — base image and tag resolve
 automatically from `TargetFramework` (`mcr.microsoft.com/dotnet/aspnet:10.0`
-here); only the repository name is worth pinning explicitly
-(`<ContainerRepository>dotnetskills</ContainerRepository>` in
-`dotnetskills.csproj`). Falls back to a standard multi-stage `Dockerfile`
-only if this ever needs more control than the SDK path gives — not needed
-yet. `.dockerignore` is present for that fallback and for any future
-`docker build` usage, even though the SDK publish path doesn't read it
-(it builds from `dotnet publish`'s output, not a build context).
+here). Falls back to a standard multi-stage `Dockerfile` only if this ever
+needs more control than the SDK path gives — not needed yet. `.dockerignore`
+is present for that fallback and for any future `docker build` usage, even
+though the SDK publish path doesn't read it (it builds from `dotnet
+publish`'s output, not a build context).
 
 The image listens on **port 8080** (the MS container images' default
 `ASPNETCORE_HTTP_PORTS`) — not 5066/7105, which are only the `dotnet
 watch run` dev-server ports from `launchSettings.json`.
+
+### The repository name self-derives — it isn't a literal string anywhere
+
+`dotnetskills.csproj`:
+
+```xml
+<ContainerRepository>$(MSBuildProjectName.ToLowerInvariant())</ContainerRepository>
+```
+
+**Not** `<ContainerRepository>dotnetskills</ContainerRepository>`, even
+though that's what this repo would resolve to either way. The reason is
+this template's own rename flow: `scripts/new-project.sh` produces
+PascalCase project names (`Contoso.Portal`, the documented example) by
+design — matching normal .NET naming conventions — but Docker/OCI repository
+names **must be lowercase**. A literal, renamed value
+(`<ContainerRepository>Contoso.Portal</ContainerRepository>`) still *builds*
+locally without error — the SDK silently normalizes an invalid value when it
+has to (confirmed: `Contoso.Portal` → `contoso-portal`, dots included in the
+substitution) — but that silent normalization is exactly the trap: every
+*other* place that needs to reference the same image by name
+(`compose.yaml`, the CI workflow) has no way to know what the SDK privately
+renamed it to, so a literal `Contoso.Portal` reference there points at an
+image that doesn't actually exist under that name. Self-deriving avoids the
+whole class of problem: `$(MSBuildProjectName.ToLowerInvariant())` always
+produces a valid, *predictable* value, for any project name, with nothing to
+keep in sync by hand.
+
+`compose.yaml` and the GitHub Actions workflow can't evaluate MSBuild
+functions, so they each compute the equivalent lowercase form independently
+(`scripts/run-stack.sh` exports `$APP_IMAGE`; `deploy.yml` has its own
+"Compute the image repository" step) — see P5.2 and P5.3 below. All three
+computations produce the same value for the same project name; that's a
+property to preserve if any of them ever change, not just current behavior.
+
+**Caught and fixed by actually testing the rename, not just the template
+unrenamed** — `bash scripts/new-project.sh Contoso.Portal`, then `dotnet
+publish -t:PublishContainer` and `docker compose up` against the result,
+which is exactly how this bug reproduced (`docker compose up` failing with
+`invalid reference format: repository name ... must be lowercase`) before
+the fix.
 
 **Known-benign startup message:** `Cannot load library libgssapi_krb5.so.2`
 — Npgsql probing for optional GSSAPI/Kerberos auth support, which this app
@@ -42,15 +80,22 @@ bash scripts/run-stack.sh --no-seed    # build + start only
 bash scripts/run-stack.sh --down       # stop everything
 ```
 
-`compose.yaml`'s `app` service uses `image: dotnetskills:latest` — the image
-P5.1 builds — **not** a Dockerfile `build:` section, so `docker compose up`
-alone can't build it from source (Compose's own build mechanism expects a
-Dockerfile, and P5.1 deliberately doesn't have one). `scripts/run-stack.sh`
-is what makes it genuinely **one command**: it runs the SDK container
-publish, then `docker compose up -d`, then seeds
-(`docker compose run --rm app seed` — the same `dotnet run -- seed` verb
-dispatch, reached by appending `seed` to the image's exec-form
-`ENTRYPOINT ["dotnet", "/app/dotnetskills.dll"]`; idempotent, safe to rerun).
+`compose.yaml`'s `app` service uses `image: ${APP_IMAGE:-dotnetskills}:latest`
+— the image P5.1 builds — **not** a Dockerfile `build:` section, so `docker
+compose up` alone can't build it from source (Compose's own build mechanism
+expects a Dockerfile, and P5.1 deliberately doesn't have one).
+`scripts/run-stack.sh` is what makes it genuinely **one command**: it
+computes `$APP_IMAGE` (the same lowercased form P5.1's `ContainerRepository`
+self-derives — `compose.yaml` can't evaluate MSBuild functions, so this
+script computes the equivalent independently and exports it), runs the SDK
+container publish, then `docker compose up -d` (which picks up `$APP_IMAGE`
+from the environment), then seeds (`docker compose run --rm app seed` — the
+same `dotnet run -- seed` verb dispatch, reached by appending `seed` to the
+image's exec-form `ENTRYPOINT ["dotnet", "/app/<name>.dll"]`; idempotent,
+safe to rerun). The `:dotnetskills` fallback in `${APP_IMAGE:-dotnetskills}`
+only covers a bare `docker compose up` run against this *unrenamed* template
+— always use `run-stack.sh`, which sets `$APP_IMAGE` correctly regardless of
+what the project's been renamed to.
 
 - `db` and `mail` are unchanged from P1.2/P4.2 — `app` is new. It talks to
   them by **service name** (`db`, `mail`), not `localhost` — a different
@@ -149,10 +194,24 @@ fly.toml                       # Fly app config
   registry account or secret needed beyond the `GITHUB_TOKEN` Actions
   already provides. Tagged by **commit SHA**, never `latest` — every deploy
   references one exact, reproducible image.
+- **The repository name is computed once, in its own step** (`${GITHUB_REPOSITORY,,}`
+  — bash lowercasing), not assumed to already be lowercase: `github.repository`
+  is `owner/repo`, and neither GitHub repo names nor this template's own
+  renamed project names (`Contoso.Portal`) are guaranteed lowercase, while
+  Docker/OCI repository names must be. Both the publish step and the
+  `flyctl deploy --image` reference reuse the *same* computed value, so they
+  can't drift apart — see P5.1's "repository name self-derives" above for
+  why this matters.
 - **`fly.toml`** has no `[build]` section — `flyctl deploy` in the workflow
-  always gets `--image ghcr.io/<owner>/dotnetskills:<sha>` explicitly. A
+  always gets `--image ghcr.io/<owner-repo, lowercased>:<sha>` explicitly. A
   bare `fly deploy` run by hand without `--image` would otherwise look for
-  a Dockerfile, which this repo deliberately doesn't have.
+  a Dockerfile, which this repo deliberately doesn't have. Its `app` line is
+  a placeholder (`"your-app-name"`), not this repo's name, and is
+  **excluded from `scripts/new-project.sh`'s identifier rewrite** — Fly app
+  names have different rules than a C# project name (lowercase, globally
+  unique, chosen at `fly apps create` time, not derivable from anything in
+  the repo), so leaving it a name-shaped placeholder that would still be
+  wrong is worse than an explicit "set this by hand."
 - **`/alive`** (P5.4 — liveness only, no DB dependency) is the configured
   health check, not `/health` — the right choice for "is this Machine up,"
   not "can it reach every dependency right now" (which a database blip
@@ -243,3 +302,19 @@ restart still correctly redirects (`302`) — persistence didn't weaken the
 auth boundary itself. `dotnet test` → 29/29 (unchanged — no test-covered
 code path changed), clean build with analyzers, `dotnet format
 --verify-no-changes` clean.
+
+**The repository-name-casing fix**, against a real renamed project (`bash
+scripts/new-project.sh Contoso.Portal --with-sample`, applied to a
+throwaway clone): reproduced the bug first — before the fix, `dotnet
+publish -t:PublishContainer` built and silently tagged the image
+`contoso-portal` (SDK auto-normalization) while `compose.yaml` still
+referenced the literal, unnormalized `Contoso.Portal:latest`, and `docker
+compose up` failed outright with `invalid reference format: repository name
+... must be lowercase`. After the fix: `Contoso.Portal.csproj`'s
+`ContainerRepository` still self-derives correctly (unchanged from the
+template, since it's not a literal string the rename touches);
+`fly.toml`'s `app` line stayed the `"your-app-name"` placeholder (confirmed
+excluded from the rewrite); `deploy.yml`'s repository-computation step
+survived intact. `bash scripts/run-stack.sh --no-seed` on the renamed clone
+→ `docker compose ps` shows `contoso.portal:latest` running (not
+`dotnetskills` or an invalid reference), `/alive` → `200`.

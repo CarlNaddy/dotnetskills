@@ -23,8 +23,19 @@ fi
 seed=1
 [ "${1:-}" = "--no-seed" ] && seed=0
 
+CSPROJ="$(ls "$ROOT"/*.csproj | head -1)"
+
+# compose.yaml's `app` image must match what $CSPROJ's ContainerRepository
+# actually builds — lowercased (Docker/OCI repository names can't be
+# uppercase; MSBuildProjectName.ToLowerInvariant() in the .csproj already
+# handles this for `dotnet publish` itself, but compose.yaml can't evaluate
+# MSBuild functions, so this script computes the same value and exports it
+# for compose.yaml's ${APP_IMAGE:-dotnetskills} to pick up.
+export APP_IMAGE
+APP_IMAGE="$(basename "$CSPROJ" .csproj | tr '[:upper:]' '[:lower:]')"
+
 echo "==> Building the app image (dotnet publish -t:PublishContainer)"
-dotnet publish dotnetskills.csproj -t:PublishContainer -c Release
+dotnet publish "$CSPROJ" -t:PublishContainer -c Release
 
 echo "==> Starting the full stack"
 docker compose up -d

@@ -310,14 +310,23 @@ verification notes: [`docs/deployment.md`](docs/deployment.md).
   -t:PublishContainer -c Release` — the SDK's built-in container publish
   (`Microsoft.NET.Build.Containers`), not a hand-maintained `Dockerfile`.
   Base image/tag resolve from `TargetFramework`
-  (`mcr.microsoft.com/dotnet/aspnet:10.0`); `<ContainerRepository>` in
-  `dotnetskills.csproj` pins the image name. Listens on **port 8080** (the
-  MS image default), not the `launchSettings.json` dev ports (5066/7105).
+  (`mcr.microsoft.com/dotnet/aspnet:10.0`). Listens on **port 8080** (the MS
+  image default), not the `launchSettings.json` dev ports (5066/7105).
+  `<ContainerRepository>$(MSBuildProjectName.ToLowerInvariant())</ContainerRepository>`
+  — **self-derived, not a literal string** — because this template's rename
+  (`scripts/new-project.sh`) produces PascalCase project names (`Contoso.Portal`)
+  by convention, but Docker/OCI repository names must be lowercase; a
+  literal renamed value still builds locally (the SDK silently normalizes
+  it) but then mismatches every *other* place needing the same image name
+  (`compose.yaml`, CI) — see `docs/deployment.md` for the reproduced bug and
+  fix.
 - **Full local stack (P5.2):** `bash scripts/run-stack.sh` — genuinely one
   command, even though `compose.yaml`'s `app` service (talks to `db`/`mail`
   by service name, not `localhost`) references a pre-built image rather than
-  a Dockerfile `build:` section; the script runs the P5.1 publish, then
-  `docker compose up -d`, then seeds
+  a Dockerfile `build:` section; the script computes `$APP_IMAGE` (the same
+  lowercased form P5.1 self-derives, computed independently since
+  `compose.yaml` can't evaluate MSBuild functions), runs the P5.1 publish,
+  then `docker compose up -d` (picks up `$APP_IMAGE`), then seeds
   (`docker compose run --rm app seed` — reaches the same `dotnet run --
   seed` verb dispatch via the image's exec-form `ENTRYPOINT`). `--down`
   stops everything; `--no-seed` skips the seed step.
@@ -353,13 +362,21 @@ verification notes: [`docs/deployment.md`](docs/deployment.md).
 - **CI/CD to Fly.io (P5.3):** `.github/workflows/deploy.yml`, gated on the
   existing `CI` workflow (P2.5) passing on `main` via `workflow_run` — no
   duplicated test job. Builds the P5.1 image, pushes it to GitHub Container
-  Registry tagged by commit SHA (never `latest`), `flyctl deploy`s it.
-  `fly.toml` has no `[build]` section on purpose (this repo has no
-  Dockerfile; the workflow always passes `--image` explicitly). **The
-  pipeline is written and ready; it hasn't deployed anywhere live yet** —
-  that needs one-time account-side setup (create the Fly app, attach
-  Postgres, set every secret, add the `FLY_API_TOKEN` repo secret) only the
-  app's owner can do. Exact commands: `docs/deployment.md`'s P5.3 section.
+  Registry tagged by commit SHA (never `latest`), `flyctl deploy`s it. The
+  repository name is computed once (`${GITHUB_REPOSITORY,,}`, lowercased)
+  and reused for both the publish step and `flyctl deploy --image`, same
+  reasoning as P5.1's self-deriving `ContainerRepository`. `fly.toml` has no
+  `[build]` section on purpose (this repo has no Dockerfile; the workflow
+  always passes `--image` explicitly); its `app` line is a placeholder
+  (`"your-app-name"`), **excluded from `scripts/new-project.sh`'s identifier
+  rewrite** — Fly app names follow different rules than a C# project name
+  (lowercase, globally unique, chosen at `fly apps create` time), so a
+  renamed-but-still-invalid value would be worse than an honest placeholder.
+  **The pipeline is written and ready; it hasn't deployed anywhere live
+  yet** — that needs one-time account-side setup (create the Fly app,
+  attach Postgres, set every secret, add the `FLY_API_TOKEN` repo secret)
+  only the app's owner can do. Exact commands: `docs/deployment.md`'s P5.3
+  section.
 
 ## Claude Code plugins & skills
 

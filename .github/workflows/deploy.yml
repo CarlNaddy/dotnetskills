@@ -38,14 +38,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Docker/OCI repository names must be lowercase; `github.repository`
+      # ("owner/repo") isn't guaranteed to be (GitHub repo names allow
+      # uppercase and dots — and this repo's own template rename produces
+      # PascalCase project names, e.g. "Contoso.Portal", by design). Compute
+      # the safe form once here and reuse it for both the publish step and
+      # the flyctl --image reference below, so they can never drift apart —
+      # same reasoning as dotnetskills.csproj's self-lowercasing
+      # ContainerRepository (see docs/deployment.md).
+      - name: Compute the image repository (must be lowercase)
+        id: image
+        run: echo "repository=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       # Same P5.1 SDK container publish used locally — no separate CI-only
       # build path. Tagged by commit SHA, not `latest`: every deploy
       # references one exact, reproducible image, never a floating tag.
       - name: Build + push container image
         run: >
-          dotnet publish dotnetskills.csproj -t:PublishContainer -c Release
+          dotnet publish *.csproj -t:PublishContainer -c Release
           -p:ContainerRegistry=ghcr.io
-          -p:ContainerRepository=${{ github.repository_owner }}/dotnetskills
+          -p:ContainerRepository=${{ steps.image.outputs.repository }}
           -p:ContainerImageTag=${{ github.event.workflow_run.head_sha }}
 
       - name: Install flyctl
@@ -54,7 +66,7 @@ jobs:
       - name: Deploy to Fly.io
         run: >
           flyctl deploy
-          --image ghcr.io/${{ github.repository_owner }}/dotnetskills:${{ github.event.workflow_run.head_sha }}
+          --image ghcr.io/${{ steps.image.outputs.repository }}:${{ github.event.workflow_run.head_sha }}
           --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

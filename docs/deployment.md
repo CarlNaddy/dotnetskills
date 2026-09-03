@@ -221,7 +221,10 @@ fly.toml                       # Fly app config
 
 ```bash
 # 1. Install flyctl and log in
-curl -L https://fly.io/install.sh | sh
+#    scripts/new-project.sh already runs scripts/install-flyctl.sh for you,
+#    and scripts/preflight.sh reports whether it's on PATH — if it is, skip
+#    straight to `fly auth login`. To (re)install by hand:
+bash scripts/install-flyctl.sh                # curl|sh on macOS/Linux, PowerShell installer on Windows
 fly auth login
 
 # 2. Create the app — pick a globally-unique name and a region; update

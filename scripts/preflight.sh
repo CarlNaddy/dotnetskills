@@ -54,6 +54,18 @@ else
     warn "node/npm not found — only needed for scripts/setup-openspec.sh"
 fi
 
+echo "Optional — Fly.io deploy (parity plan P5.3):"
+if command -v flyctl >/dev/null 2>&1 || command -v fly >/dev/null 2>&1; then
+    ok "flyctl $({ flyctl version || fly version; } 2>/dev/null | head -1 | awk '{print $2}')"
+elif [ -x "$HOME/.fly/bin/flyctl" ] || [ -x "$HOME/.fly/bin/flyctl.exe" ]; then
+    warn "flyctl is installed (~/.fly/bin) but not on this shell's PATH. Open a new"
+    warn "  terminal; if 'fly' still isn't found there, sign out of Windows / reboot."
+    warn "  For this shell now:  export PATH=\"\$HOME/.fly/bin:\$PATH\""
+else
+    warn "flyctl not found — only needed to deploy (bash scripts/install-flyctl.sh;"
+    warn "  or curl -L https://fly.io/install.sh | sh). See docs/deployment.md 'P5.3'."
+fi
+
 echo "Optional — Claude Code AI tooling:"
 here="$(dirname "$0")"
 if [ ! -f "$here/../.claude/settings.json" ]; then

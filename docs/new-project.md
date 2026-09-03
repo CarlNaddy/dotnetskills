@@ -14,9 +14,20 @@ the sample feature.
 - Docker (for local PostgreSQL) — <https://docs.docker.com/get-docker/>
 - Git, plus **bash** to run the scripts — on Windows use **Git Bash**
 - Node 18+ *(optional)* — only for OpenSpec (step 7) — <https://nodejs.org>
+- `flyctl` *(optional)* — only to deploy (P5.3); `scripts/new-project.sh` runs
+  `scripts/install-flyctl.sh` for you (rerunnable standalone), `scripts/preflight.sh`
+  reports it — <https://fly.io/docs/flyctl/install/>
 
 `scripts/new-project.sh` runs `scripts/preflight.sh` first and stops if a
 required tool is missing; run `bash scripts/preflight.sh` yourself any time.
+
+**A tool the script installs for you may not be on `PATH` until you open a new
+shell** — sometimes not until you sign out of the OS or reboot, because a
+running process (your terminal, its parent, an IDE) keeps the `PATH` it started
+with. Currently this applies to `flyctl` (installed by `scripts/install-flyctl.sh`,
+which modifies your user `PATH`). `scripts/new-project.sh` prints a reminder at
+the end of its output when this is the case, and `scripts/preflight.sh` reports
+"installed but not on this shell's PATH" until the new environment is picked up.
 
 **On Windows, without Git Bash yet:** every script has a `.ps1` counterpart —
 `scripts/preflight.ps1`, `scripts/new-project.ps1` — that runs from
@@ -213,8 +224,8 @@ you decide).
 | `CLAUDE.md`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.gitattributes`, `global.json` | — |
 | `compose.yaml` shape | — |
 | `Program.cs` wiring, `Endpoints/`, `Localization/`, `Resources/`, `tests/<Name>.Tests/` harness | — |
-| `fly.toml` / `.github/workflows/deploy.yml` (P5.3) — `fly.toml`'s `app` name is deliberately **not** rewritten (excluded from the identifier rewrite; Fly app names have different rules than a C# identifier) — set it by hand. See `docs/deployment.md`'s P5.3 section. | — |
-| `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/_find-git-bash.ps1`, `scripts/check-plugins.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
+| `fly.toml` / `.github/workflows/deploy.yml` (P5.3) — `fly.toml`'s `app` name is deliberately **not** rewritten (excluded from the identifier rewrite; Fly app names have different rules than a C# identifier) — set it by hand. `scripts/new-project.sh` installs `flyctl` (best-effort); the rest of the account-side setup is in `docs/deployment.md`'s P5.3 section. | — |
+| `scripts/preflight.sh`, `scripts/preflight.ps1`, `scripts/_find-git-bash.ps1`, `scripts/check-plugins.sh`, `scripts/install-flyctl.sh`, `scripts/setup-openspec.sh`, `docs/ef-migrations.md` | *(keep these)* |
 | `Components/Pages/Listings/`, `Data/Listing.cs`, `Data/Seed/`, `Features/Listings/`, `Endpoints/ListingsApiEndpoints.cs`, `Features/Jobs/ListingJobs.cs` — kept by default | *removed by `scripts/remove-sample.sh`, run separately, any time* |
 
 Remove by hand once set up: `scripts/new-project.sh`, `scripts/new-project.ps1`,

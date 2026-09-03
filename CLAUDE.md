@@ -350,8 +350,16 @@ verification notes: [`docs/deployment.md`](docs/deployment.md).
     string P1.3, OAuth secrets P3.4, seed admin password P3.6) — P5.4
     confirmed it covers the two things it itself added too (Data Protection
     needs no secret; health checks expose none).
-- **Open:** P5.3 (CI/CD to a live target) needs an actual hosting decision
-  and real credentials — not something to pick unilaterally.
+- **CI/CD to Fly.io (P5.3):** `.github/workflows/deploy.yml`, gated on the
+  existing `CI` workflow (P2.5) passing on `main` via `workflow_run` — no
+  duplicated test job. Builds the P5.1 image, pushes it to GitHub Container
+  Registry tagged by commit SHA (never `latest`), `flyctl deploy`s it.
+  `fly.toml` has no `[build]` section on purpose (this repo has no
+  Dockerfile; the workflow always passes `--image` explicitly). **The
+  pipeline is written and ready; it hasn't deployed anywhere live yet** —
+  that needs one-time account-side setup (create the Fly app, attach
+  Postgres, set every secret, add the `FLY_API_TOKEN` repo secret) only the
+  app's owner can do. Exact commands: `docs/deployment.md`'s P5.3 section.
 
 ## Claude Code plugins & skills
 

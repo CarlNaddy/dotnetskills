@@ -1,0 +1,60 @@
+# Publish + deploy to Fly.io (rails-parity plan P5.3). Gated on CI (P2.5)
+# passing on main — this workflow doesn't repeat the test job, it waits for
+# the "CI" workflow's own result via workflow_run.
+#
+# Needs, before this can run for real (see docs/deployment.md "P5.3" for the
+# exact commands): a Fly.io app already created, Postgres attached/reachable,
+# every required secret set via `fly secrets set`, and a `FLY_API_TOKEN`
+# repository secret. None of that is this workflow's job — it assumes the
+# app already exists and deploys an image to it.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same P5.1 SDK container publish used locally — no separate CI-only
+      # build path. Tagged by commit SHA, not `latest`: every deploy
+      # references one exact, reproducible image, never a floating tag.
+      - name: Build + push container image
+        run: >
+          dotnet publish dotnetskills.csproj -t:PublishContainer -c Release
+          -p:ContainerRegistry=ghcr.io
+          -p:ContainerRepository=${{ github.repository_owner }}/dotnetskills
+          -p:ContainerImageTag=${{ github.event.workflow_run.head_sha }}
+
+      - name: Install flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: >
+          flyctl deploy
+          --image ghcr.io/${{ github.repository_owner }}/dotnetskills:${{ github.event.workflow_run.head_sha }}
+          --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

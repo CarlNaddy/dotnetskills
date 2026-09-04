@@ -174,10 +174,20 @@ secret either).
 
 ## P5.3 — CI/CD to a live target (Fly.io)
 
-**The pipeline is fully written and locally verified where it can be
-without an account — it hasn't deployed anywhere live yet.** That needs
-account-side setup only you can do (a Fly.io account, credentials, real
-secrets) — this section is the exact, complete list.
+**This is live.** `fly.toml`'s `app`/`primary_region` are filled in with
+this repo's own instance (`carlnaddy-dotnetskills`, region `ams`) — not the
+generic placeholder this section otherwise describes — because this
+template repo runs its own deployment (`https://carlnaddy-dotnetskills.fly.dev/`).
+Operational detail (what's live, where every secret actually lives, known
+issues) is in [`docs/live-deployment-runbook.md`](live-deployment-runbook.md);
+this section stays the generic walkthrough for what a **new** project
+spun from this template still needs to do for **its own** app.
+
+> ⚠️ **Starting a fresh project from this template? Replace `app =
+> "carlnaddy-dotnetskills"` in `fly.toml` with your own `fly apps create`
+> name before you deploy.** `scripts/new-project.sh` deliberately never
+> touches `fly.toml` (see why below) — that value doesn't get rewritten
+> for you, and left alone it would point at the maintainer's own app.
 
 ### How it's wired
 
@@ -205,13 +215,16 @@ fly.toml                       # Fly app config
 - **`fly.toml`** has no `[build]` section — `flyctl deploy` in the workflow
   always gets `--image ghcr.io/<owner-repo, lowercased>:<sha>` explicitly. A
   bare `fly deploy` run by hand without `--image` would otherwise look for
-  a Dockerfile, which this repo deliberately doesn't have. Its `app` line is
-  a placeholder (`"your-app-name"`), not this repo's name, and is
-  **excluded from `scripts/new-project.sh`'s identifier rewrite** — Fly app
-  names have different rules than a C# project name (lowercase, globally
-  unique, chosen at `fly apps create` time, not derivable from anything in
-  the repo), so leaving it a name-shaped placeholder that would still be
-  wrong is worse than an explicit "set this by hand."
+  a Dockerfile, which this repo deliberately doesn't have. Its `app` line
+  is **excluded from `scripts/new-project.sh`'s identifier rewrite** — Fly
+  app names have different rules than a C# project name (lowercase,
+  globally unique, chosen at `fly apps create` time, not derivable from
+  anything in the repo), so the rename script leaves it alone rather than
+  produce a renamed-but-still-invalid value. It originally shipped as an
+  explicit placeholder (`"your-app-name"`); this repo's own `fly.toml` now
+  names its own live app (`carlnaddy-dotnetskills`) instead, since that app
+  actually exists — **a new project must still replace that value with its
+  own app name by hand**, exactly as it would have replaced the placeholder.
 - **`/alive`** (P5.4 — liveness only, no DB dependency) is the configured
   health check, not `/health` — the right choice for "is this Machine up,"
   not "can it reach every dependency right now" (which a database blip
@@ -227,8 +240,10 @@ fly.toml                       # Fly app config
 bash scripts/install-flyctl.sh                # curl|sh on macOS/Linux, PowerShell installer on Windows
 fly auth login
 
-# 2. Create the app — pick a globally-unique name and a region; update
-#    fly.toml's `app` and `primary_region` to match what you chose
+# 2. Create the app — pick a globally-unique name and a region; then
+#    REPLACE fly.toml's `app` (currently this repo's own instance,
+#    "carlnaddy-dotnetskills") and `primary_region` with what you chose —
+#    don't deploy to the maintainer's app
 fly apps create <your-app-name>
 
 # 3. Postgres — Fly Postgres is the natural default (same "no separate
@@ -321,3 +336,43 @@ excluded from the rewrite); `deploy.yml`'s repository-computation step
 survived intact. `bash scripts/run-stack.sh --no-seed` on the renamed clone
 → `docker compose ps` shows `contoso.portal:latest` running (not
 `dotnetskills` or an invalid reference), `/alive` → `200`.
+
+## Verified end-to-end (2026-09-04) — the live deploy itself
+
+**P5.3 has now actually deployed live**, not just "written and ready":
+`carlnaddy-dotnetskills` created, `carlnaddy-dotnetskills-db` (single-node
+Fly Postgres, `ams`) created and attached, `[deploy] release_command =
+"seed"` added to `fly.toml` so migrations + the idempotent seed run before
+every release, and a manual first deploy (`flyctl deploy --image
+registry.fly.io/carlnaddy-dotnetskills:bootstrap`) served real traffic —
+`/`, `/health`, `/alive` all `200` at
+<https://carlnaddy-dotnetskills.fly.dev/>. Full operational detail (where
+every credential actually lives, cost, cheat sheet): `docs/live-deployment-runbook.md`.
+
+Two real gotchas, found only by actually deploying, not by reviewing the
+plan:
+
+- **`fly postgres attach` sets `DATABASE_URL` in `postgres://...` form,
+  which this app's `UseNpgsql(connectionString)` cannot parse** — Npgsql
+  wants the keyword form (`Host=...;Username=...`). Fixed by reading the
+  attach output and setting `ConnectionStrings__Default` explicitly in
+  keyword form via `fly secrets set`, overriding the URL-form secret Fly
+  wrote automatically. This step is missing from the "Account-side setup"
+  walkthrough above as written — treat "convert the `DATABASE_URL` Fly
+  gives you" as an implicit step 3.5 until that section is rewritten.
+- **The Postgres Machine repeatedly stopped itself** (`requested_stop:
+  true`, clean exit) on an almost-exact 5-minute interval, regardless of
+  memory size (256MB → 512MB made no difference). Eventually traced to the
+  **Fly account's free trial having ended** (`flyctl status` started
+  returning `"trial has ended, please add a credit card"`) — not a bug in
+  this repo or its config; a real billing action on the Fly account is
+  required before this deployment is reliable. Open item, tracked in
+  `docs/live-deployment-runbook.md`.
+
+`FLY_API_TOKEN` was generated and handed off for manual entry as a GitHub
+repository secret — **not independently confirmed set** from this side, so
+the automatic CI/CD path (push to `main` → `deploy.yml`) is unverified; the
+manual `flyctl deploy --image` path above is what's actually been
+exercised. P5.3's accept criterion ("green pipeline deploys to a live
+environment") isn't fully met yet for that reason — see
+`docs/rails-parity-plan.md`'s P5.3 item for the tracked status.

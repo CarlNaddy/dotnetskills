@@ -13,7 +13,7 @@ separate set of facts to keep in sync.
 
 ---
 
-## Status (as of 2026-09-03)
+## Status (as of 2026-09-04)
 
 **The core inner loop is at Rails parity.** A developer can define a model,
 evolve its schema through reversible migrations, scaffold a list/details/
@@ -27,9 +27,13 @@ how). On testing and type safety the setup is **ahead of Rails**.
 stays open only conditionally — the plan itself gates it on a feature
 actually needing it, and none currently does; P4.6 (observability) is
 deferred to vNext.** **P5 (deployment) is nearly done — P5.1 (container
-image), P5.2 (full local stack), and P5.4 (production hardening) done; only
-P5.3 (CI/CD to a live target) remains, blocked on a hosting decision and
-real credentials, not something to pick unilaterally.** P4 is the half where
+image), P5.2 (full local stack), and P5.4 (production hardening) done;
+P5.3 (CI/CD to a live target) has now deployed live
+(`https://carlnaddy-dotnetskills.fly.dev/`) via the manual path — the
+automated CI/CD path (a push to `main` triggering `deploy.yml`) is still
+unconfirmed, and the Fly account's trial has ended and needs a payment
+method before the deployment is reliable (see
+`docs/live-deployment-runbook.md`).** P4 is the half where
 Rails' "it's already there" advantage is structural: no first-party library
 and no Claude Code skill covers any of it. Each P4 item is a decide-a-library + wire-a-seam +
 write-a-convention exercise (see the P4 phase below for the chosen library
@@ -47,7 +51,7 @@ P6.3 (`.http` request collections) are both complete.
 | 4 | Authenticate & authorize users | ✅ register/login/logout/manage, role/policy authorization, seeded dev admin, config-gated OAuth2 (Google/Microsoft/GitHub) all wired; OAuth provider round-trip needs real credentials (operational, not code) |
 | 5 | Jobs / email / cache / file storage / real-time | 🟡 jobs (Hangfire, P4.1), email (MailKit, P4.2), caching/rate limiting (first-party, P4.3), and file storage (`IFileStore`, P4.4) done; real-time open (P4.5, only if a feature needs it) |
 | 6 | Model + integration + component tests, reusable test data | ✅ at parity (ahead of Rails — see P2) |
-| 7 | One-command local stack + one deploy pipeline | 🟡 `bash scripts/run-stack.sh` — app + Postgres + mail sink, one command; persisted Data Protection keys + health checks (P5.1–P5.2, P5.4); CI/CD to a live target needs a hosting decision (P5.3) |
+| 7 | One-command local stack + one deploy pipeline | 🟡 `bash scripts/run-stack.sh` — app + Postgres + mail sink, one command; persisted Data Protection keys + health checks (P5.1–P5.2, P5.4); live at `carlnaddy-dotnetskills.fly.dev` via manual deploy (P5.3) — automated CI/CD path unconfirmed, Fly trial needs a payment method |
 | 8 | Start a new project from the baseline in one step | ✅ template-repo + script route (P7.1); one-command `dotnet new` (P7.2) deferred to (vNext) |
 
 ### Rails capability → where this stack lands
@@ -66,7 +70,7 @@ definition, or without a direct scorecard line):
 | ActionCable | ⚠️ Blazor rides SignalR internally; no pattern for app-level hubs (P4.5) |
 | ActiveStorage (files + variants) | ✅ `IFileStore` abstraction, `LocalDiskFileStore` + config-driven provider switch, worked pattern `Listing` photos, ingest via `minimal-api-file-upload` conventions (P4.4). No variants/transforms (Rails' image processing) — not asked for |
 | Fragment / Russian-doll caching | ✅ `HybridCache` (in-memory) + `OutputCache` + `AddRateLimiter`, all first-party, fronting the `Listings` JSON API; Redis distributed backplane vNext (P4.3) |
-| Deploy (Kamal / Heroku one-liner) | 🟡 `dotnet publish -t:PublishContainer` + `bash scripts/run-stack.sh` = one-command local full stack; persisted Data Protection keys, `/health`+`/alive`, forwarded-headers (P5.1–P5.2, P5.4); CI/CD to a live target needs a hosting decision (P5.3) |
+| Deploy (Kamal / Heroku one-liner) | 🟡 `dotnet publish -t:PublishContainer` + `bash scripts/run-stack.sh` = one-command local full stack; persisted Data Protection keys, `/health`+`/alive`, forwarded-headers (P5.1–P5.2, P5.4); live on Fly.io via manual deploy (P5.3) — automated CI/CD path and Fly account billing still open |
 | Admin panel (ActiveAdmin) | ⚠️ `MudDataGrid` + `create-datadriven` gets you there by generation |
 | Observability | ⚠️ built-in `ILogger` now; health checks + OpenTelemetry deferred (P4.6 / vNext) |
 
@@ -831,19 +835,38 @@ Follow the official Microsoft container guidance ("Containerize a .NET app",
   `latest`. `fly.toml` deliberately has no `[build]` section (no Dockerfile
   in this repo; the workflow always passes `--image` explicitly), health
   check points at `/alive` (P5.4 — liveness only, so a DB blip doesn't
-  wrongly flag the Machine itself as unhealthy); its `app` line is an
-  explicit placeholder (`"your-app-name"`), excluded from
-  `scripts/new-project.sh`'s identifier rewrite (Fly app names have
-  different naming rules than a C# project name — see the addendum below).
-  Container-publish property overrides (`ContainerRepository`,
-  `ContainerImageTag`) verified locally; the YAML/TOML syntax verified
-  parseable. Left unchecked deliberately — it hasn't deployed anywhere live
-  yet, because that needs one-time account-side setup only the app's owner
-  can do (create the Fly app, attach Postgres, set every secret, add
-  `FLY_API_TOKEN`) — exact commands in
-  [`docs/deployment.md`](deployment.md)'s P5.3 section. This mirrors P3.4's
-  OAuth round-trip: code complete and locally verified up to the boundary
-  of needing real external credentials, not faked past it.
+  wrongly flag the Machine itself as unhealthy); its `app` line is
+  excluded from `scripts/new-project.sh`'s identifier rewrite (Fly app
+  names have different naming rules than a C# project name — see the
+  addendum below) — it originally shipped as an explicit placeholder
+  (`"your-app-name"`).
+
+  **Update — it has now actually deployed live**, via the manual path
+  (`flyctl deploy --image`), not yet the automated CI/CD path. `fly.toml`'s
+  `app`/`primary_region` are filled in with this repo's own instance
+  (`carlnaddy-dotnetskills`, region `ams`), replacing the placeholder — a
+  new project spun from this template must replace that value with its own
+  `fly apps create` name (`scripts/new-project.sh` still won't do this for
+  you). Live at `https://carlnaddy-dotnetskills.fly.dev/`; `/`, `/health`,
+  `/alive` all verified `200`. Operational detail — where every credential
+  lives, cost, cheat sheet, open items — is in
+  [`docs/live-deployment-runbook.md`](live-deployment-runbook.md); the
+  deploy-specific gotchas found (the `DATABASE_URL`-to-keyword-connection-
+  string conversion, and the Fly account's free trial ending mid-setup,
+  which caused Postgres to repeatedly stop itself) are recorded in
+  [`docs/deployment.md`](deployment.md)'s P5.3 verification section.
+
+  **Left unchecked still**, because the accept criterion is specifically
+  "green pipeline deploys" — the *automated* path: `FLY_API_TOKEN` was
+  generated and handed off for manual entry as a GitHub repository secret
+  but isn't independently confirmed set, so a push to `main` triggering
+  `deploy.yml` successfully hasn't been observed yet. The account-side
+  setup itself (create the Fly app, attach Postgres, set every secret) was
+  account-and-money work only the app's owner could do — exact commands in
+  `docs/deployment.md`'s P5.3 section. This still mirrors P3.4's OAuth
+  round-trip in spirit: real infrastructure and real credentials, not
+  faked past the boundary — it's just that the boundary has now been
+  crossed manually, with the fully-automated path the remaining gap.
 
   _flyctl is now part of template setup._ `scripts/install-flyctl.sh` (new,
   rerunnable standalone) installs the Fly CLI best-effort — skips if it's

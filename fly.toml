@@ -11,20 +11,30 @@
 # excluded from scripts/new-project.sh's identifier rewrite. Replace it with
 # whatever you `fly apps create` yourself.
 
-app = "your-app-name"         # required — `fly apps create <name>` first, then set this to match
-primary_region = "iad"        # edit to whatever region you pick at create time
+app = "carlnaddy-dotnetskills"
+primary_region = "ams"        # Amsterdam, Netherlands
 
 [build]
   # Deliberately empty. `flyctl deploy` always gets --image explicitly (see
   # deploy.yml) — a bare `fly deploy` run by hand without --image would
   # otherwise look for a Dockerfile, which doesn't exist here on purpose.
 
+[deploy]
+  # The app does not auto-migrate on startup — only `dotnet dotnetskills.dll
+  # seed` does (applies pending migrations, then runs the idempotent sample +
+  # admin seeders; see Data/Seed/SeedCommand.cs). Fly runs this in a temporary
+  # machine, with the app's secrets and DB access, before each release goes
+  # live — the prod equivalent of run-stack.sh's `docker compose run --rm app
+  # seed`. Requires Seed__AdminPassword to be set outside Development, or the
+  # release aborts (Data/Seed/IdentitySeeder.cs).
+  release_command = "seed"
+
 [http_service]
   internal_port = 8080        # matches the container's ASPNETCORE_HTTP_PORTS default (P5.1)
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0      # scale to zero when idle — costs ~$0 at rest, wakes on request
 
 [[http_service.checks]]
   interval = "15s"

@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 #
 # Check the tools this project needs.
-#   scripts/preflight.sh              required tools (OpenSpec/Node = optional)
-#   scripts/preflight.sh --openspec   also make Node/npm a hard requirement
+#   scripts/preflight.sh   required tools
 #
 # Exits non-zero if a required tool is missing or misconfigured.
 
 set -uo pipefail
-
-need_openspec=0
-[ "${1:-}" = "--openspec" ] && need_openspec=1
 
 fail=0
 ok()   { printf '  \033[32mok\033[0m   %s\n' "$1"; }
@@ -35,6 +31,12 @@ else
     bad "dotnet — install the .NET 10 SDK from https://dotnet.microsoft.com/download/dotnet/10.0"
 fi
 
+if dotnet ef --version >/dev/null 2>&1; then
+    ok "dotnet-ef $(dotnet ef --version 2>/dev/null | tail -1 | awk '{print $NF}')"
+else
+    bad "dotnet-ef tool not restored — run: dotnet tool restore"
+fi
+
 if command -v docker >/dev/null 2>&1; then
     if docker info >/dev/null 2>&1; then
         ok "docker $(docker info --format '{{.ServerVersion}}' 2>/dev/null) (daemon running)"
@@ -45,13 +47,16 @@ else
     bad "docker — install from https://docs.docker.com/get-docker/"
 fi
 
-echo "Optional — OpenSpec (spec-driven development):"
 if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     ok "node $(node --version) + npm $(npm --version)"
-elif [ "$need_openspec" = 1 ]; then
-    bad "node + npm — required for OpenSpec; install Node 18+ from https://nodejs.org"
 else
-    warn "node/npm not found — only needed for scripts/setup-openspec.sh"
+    bad "node + npm — required for OpenSpec; install Node 18+ from https://nodejs.org"
+fi
+
+if command -v openspec >/dev/null 2>&1; then
+    ok "openspec $(openspec --version 2>/dev/null | tail -1)"
+else
+    bad "openspec CLI — run: bash scripts/setup-openspec.sh (or npm install -g @fission-ai/openspec@latest)"
 fi
 
 echo "Optional — Fly.io deploy (parity plan P5.3):"

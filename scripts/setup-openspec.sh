@@ -10,7 +10,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-"$ROOT/scripts/preflight.sh" --openspec
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "node + npm required — install Node 18+ from https://nodejs.org" >&2
+    exit 1
+fi
 
 if ! command -v openspec >/dev/null 2>&1; then
     echo "==> npm install -g @fission-ai/openspec@latest"
@@ -19,6 +22,8 @@ fi
 
 echo "==> openspec init"
 openspec init
+
+"$ROOT/scripts/preflight.sh"
 
 cat <<'EOF'
 

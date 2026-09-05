@@ -32,7 +32,7 @@ scaffold, and a worked reference feature — `Listing` CRUD end to end
 | **.NET 10 SDK** | build / run / test | <https://dotnet.microsoft.com/download/dotnet/10.0> |
 | **Docker** | local PostgreSQL | <https://docs.docker.com/get-docker/> |
 | **Git + bash** | the setup scripts (Git Bash on Windows) | <https://git-scm.com/downloads> |
-| Node 18+ *(optional)* | OpenSpec, for spec-driven development | <https://nodejs.org> |
+| **Node 18+ + OpenSpec CLI** | spec-driven development (`bash scripts/setup-openspec.sh`) | <https://nodejs.org> |
 
 Run `bash scripts/preflight.sh` any time to check these. **On Windows, without
 Git Bash yet:** every script has a `.ps1` counterpart (`preflight.ps1`,
